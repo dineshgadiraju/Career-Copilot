@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
 func main() {
 	ConnectDB()
 	router := gin.Default()
@@ -15,6 +16,11 @@ func main() {
 		})
 	})
 	router.POST("/register", Register)
+	router.POST("/login", Login)
+	router.GET(
+		"/profile",
+		AuthMiddleware(),
+		GetProfile)
 
 	router.Run(":8081")
 }
