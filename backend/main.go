@@ -5,10 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
-
 func main() {
 	ConnectDB()
-
 	router := gin.Default()
 
 	router.GET("/health", func(c *gin.Context) {
@@ -16,6 +14,7 @@ func main() {
 			"status": "Backend Running",
 		})
 	})
+	router.POST("/register", Register)
 
 	router.Run(":8081")
 }

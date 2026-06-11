@@ -7,10 +7,14 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+var DB *pgx.Conn
+
 func ConnectDB() {
-	conn, err := pgx.Connect(
+	var err error
+
+	DB, err = pgx.Connect(
 		context.Background(),
-		"postgres://postgres:postgres@localhost:5432/careercopilot",
+		"postgres://postgres:welcome2ibm@localhost:5433/careercopilot?sslmode=disable",
 	)
 
 	if err != nil {
@@ -19,5 +23,4 @@ func ConnectDB() {
 
 	fmt.Println("✅ Connected to PostgreSQL")
 
-	defer conn.Close(context.Background())
 }
