@@ -21,6 +21,11 @@ func main() {
 		"/profile",
 		AuthMiddleware(),
 		GetProfile)
+	router.POST(
+		"/resume/upload",
+		AuthMiddleware(),
+		UploadResume,
+	)
 
 	router.Run(":8081")
 }
