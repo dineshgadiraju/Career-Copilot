@@ -26,6 +26,12 @@ func main() {
 		AuthMiddleware(),
 		UploadResume,
 	)
+	router.GET(
+		"/resume/latest",
+		AuthMiddleware(),
+		GetLatestResume,
+	)
+	router.GET("/dashboard", AuthMiddleware(), GetDashboard)
 
 	router.Run(":8081")
 }
