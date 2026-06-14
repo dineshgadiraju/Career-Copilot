@@ -3,26 +3,36 @@ package main
 import (
 	"context"
 	"net/http"
+	"sort"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
 type JobRecommendation struct {
-	ID             int      `json:"id"`
-	Title          string   `json:"title"`
-	Company        string   `json:"company"`
-	RequiredSkills []string `json:"required_skills"`
-	MatchedSkills  []string `json:"matched_skills"`
-	MissingSkills  []string `json:"missing_skills"`
-	MatchScore     int      `json:"match_score"`
+	ID                      int      `json:"id"`
+	Title                   string   `json:"title"`
+	Company                 string   `json:"company"`
+	RequiredSkills          []string `json:"required_skills"`
+	MatchedSkills           []string `json:"matched_skills"`
+	MissingSkills           []string `json:"missing_skills"`
+	LearningRecommendations []string `json:"learning_recommendations"`
+	MatchScore              int      `json:"match_score"`
+}
+
+func normalizeSkill(skill string) string {
+	return strings.ToLower(strings.TrimSpace(skill))
 }
 
 func containsSkill(skills []string, target string) bool {
+	target = normalizeSkill(target)
+
 	for _, skill := range skills {
-		if skill == target {
+		if normalizeSkill(skill) == target {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -88,6 +98,10 @@ func GetRecommendedJobs(c *gin.Context) {
 				job.MatchedSkills = append(job.MatchedSkills, requiredSkill)
 			} else {
 				job.MissingSkills = append(job.MissingSkills, requiredSkill)
+				job.LearningRecommendations = append(
+					job.LearningRecommendations,
+					requiredSkill,
+				)
 			}
 		}
 
@@ -97,6 +111,10 @@ func GetRecommendedJobs(c *gin.Context) {
 
 		recommendations = append(recommendations, job)
 	}
+
+	sort.Slice(recommendations, func(i, j int) bool {
+		return recommendations[i].MatchScore > recommendations[j].MatchScore
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"jobs": recommendations,
