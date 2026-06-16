@@ -1,15 +1,25 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	err := godotenv.Load()
+
+	if err != nil {
+		log.Println("No .env file found")
+	}
+
 	ConnectDB()
+
 	router := gin.Default()
+
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"http://localhost:3000",
@@ -37,24 +47,15 @@ func main() {
 			"status": "Backend Running",
 		})
 	})
+
 	router.POST("/register", Register)
 	router.POST("/login", Login)
-	router.GET(
-		"/profile",
-		AuthMiddleware(),
-		GetProfile)
-	router.POST(
-		"/resume/upload",
-		AuthMiddleware(),
-		UploadResume,
-	)
-	router.GET(
-		"/resume/latest",
-		AuthMiddleware(),
-		GetLatestResume,
-	)
+	router.GET("/profile", AuthMiddleware(), GetProfile)
+	router.POST("/resume/upload", AuthMiddleware(), UploadResume)
+	router.GET("/resume/latest", AuthMiddleware(), GetLatestResume)
 	router.GET("/dashboard", AuthMiddleware(), GetDashboard)
 	router.GET("/jobs/recommended", AuthMiddleware(), GetRecommendedJobs)
 	router.POST("/chat", AuthMiddleware(), CareerChat)
+
 	router.Run(":8081")
 }

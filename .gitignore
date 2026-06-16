@@ -1,0 +1,9 @@
+frontend/node_modules/
+ml-service/venv/
+backend/.env
+.env
+uploads/
+*.log
+.vscode/
+__pycache__/
+*.pyc

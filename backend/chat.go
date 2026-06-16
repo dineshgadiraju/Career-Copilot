@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,29 +26,127 @@ type ChatJobMatch struct {
 	MatchScore     int
 }
 
+type OpenAIRequest struct {
+	Model           string `json:"model"`
+	Instructions    string `json:"instructions"`
+	Input           string `json:"input"`
+	MaxOutputTokens int    `json:"max_output_tokens"`
+}
+
+type OpenAIResponse struct {
+	Output []struct {
+		Content []struct {
+			Text string `json:"text"`
+		} `json:"content"`
+	} `json:"output"`
+}
+
 func CareerChat(c *gin.Context) {
 	userID := c.GetInt("user_id")
 
 	var req ChatRequest
-
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
-
-	message := strings.ToLower(req.Message)
 
 	skills, score := getLatestResumeData(userID)
 	jobMatches := getChatJobMatches(skills)
 	missingSkills := collectMissingSkills(jobMatches)
 
-	reply := buildCareerReply(message, skills, score, jobMatches, missingSkills)
+	reply, err := callOpenAICareerCoach(req.Message, skills, score, jobMatches, missingSkills)
+
+	if err != nil {
+		reply = buildCareerReply(strings.ToLower(req.Message), skills, score, jobMatches, missingSkills)
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"reply": reply,
 	})
+}
+
+func callOpenAICareerCoach(
+	userMessage string,
+	skills []string,
+	score int,
+	jobMatches []ChatJobMatch,
+	missingSkills []string,
+) (string, error) {
+	apiKey := os.Getenv("OPENAI_API_KEY")
+
+	if apiKey == "" {
+		return "", os.ErrNotExist
+	}
+
+	contextText := buildAIContext(skills, score, jobMatches, missingSkills)
+
+	requestBody := OpenAIRequest{
+		Model:           "gpt-4.1-mini",
+		Instructions:    "You are an AI Career Coach. Give practical, concise, personalized advice. Use the user's resume skills, score, missing skills, and job matches. Keep answers friendly and action-oriented.",
+		Input:           contextText + "\n\nUser question: " + userMessage,
+		MaxOutputTokens: 300,
+	}
+
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return "", err
+	}
+
+	httpReq, err := http.NewRequest(
+		"POST",
+		"https://api.openai.com/v1/responses",
+		bytes.NewBuffer(jsonBody),
+	)
+
+	if err != nil {
+		return "", err
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+
+	client := &http.Client{}
+
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	var openAIResp OpenAIResponse
+
+	if err := json.NewDecoder(resp.Body).Decode(&openAIResp); err != nil {
+		return "", err
+	}
+
+	if len(openAIResp.Output) == 0 ||
+		len(openAIResp.Output[0].Content) == 0 ||
+		openAIResp.Output[0].Content[0].Text == "" {
+		return "", os.ErrInvalid
+	}
+
+	return openAIResp.Output[0].Content[0].Text, nil
+}
+
+func buildAIContext(
+	skills []string,
+	score int,
+	jobMatches []ChatJobMatch,
+	missingSkills []string,
+) string {
+	bestJob := "No job matches found yet."
+
+	if len(jobMatches) > 0 {
+		best := jobMatches[0]
+		bestJob = best.Title + " at " + best.Company +
+			" with match score " + strconv.Itoa(best.MatchScore) + "%"
+	}
+
+	return "Resume score: " + strconv.Itoa(score) + "%\n" +
+		"Detected skills: " + strings.Join(skills, ", ") + "\n" +
+		"Missing skills: " + strings.Join(missingSkills, ", ") + "\n" +
+		"Best job match: " + bestJob
 }
 
 func getLatestResumeData(userID int) ([]string, int) {
@@ -155,7 +256,7 @@ func buildCareerReply(
 	if strings.Contains(message, "resume") || strings.Contains(message, "improve") {
 		return "Your current resume score is " + strconv.Itoa(score) + "%. I detected these skills: " +
 			strings.Join(skills, ", ") +
-			". To improve your resume, add measurable project impact, describe backend architecture, mention API endpoints, database design, authentication, Docker usage, and deployment details."
+			". To improve your resume, add measurable project impact, backend architecture details, API endpoints, database work, Docker usage, and deployment details."
 	}
 
 	if strings.Contains(message, "learn") ||
@@ -164,7 +265,7 @@ func buildCareerReply(
 		if len(missingSkills) > 0 {
 			return "Based on your resume and recommended jobs, you should learn: " +
 				strings.Join(missingSkills, ", ") +
-				". Start with Docker and PostgreSQL if you want backend roles, then move to AWS and Kubernetes."
+				". Start with Docker and PostgreSQL, then move to AWS and Kubernetes."
 		}
 
 		return "Your current skills are strong. Next, focus on system design, testing, deployment, cloud platforms, and production-level backend architecture."
@@ -183,11 +284,11 @@ func buildCareerReply(
 				". Missing skills: " + strings.Join(best.MissingSkills, ", ") + "."
 		}
 
-		return "Based on your current profile, target backend developer, Go developer, full-stack developer, and Python ML engineer roles."
+		return "Target backend developer, Go developer, full-stack developer, and Python ML engineer roles."
 	}
 
 	if strings.Contains(message, "interview") {
-		return "For backend interviews, practice Go fundamentals, REST APIs, SQL queries, JWT authentication, PostgreSQL, Docker, concurrency, error handling, and system design. Also be ready to explain your AI Career Copilot project end-to-end."
+		return "For backend interviews, practice Go fundamentals, REST APIs, SQL queries, JWT authentication, PostgreSQL, Docker, concurrency, error handling, and system design."
 	}
 
 	return "Based on your resume, your detected skills are: " +
