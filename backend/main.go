@@ -55,6 +55,6 @@ func main() {
 	)
 	router.GET("/dashboard", AuthMiddleware(), GetDashboard)
 	router.GET("/jobs/recommended", AuthMiddleware(), GetRecommendedJobs)
-
+	router.POST("/chat", AuthMiddleware(), CareerChat)
 	router.Run(":8081")
 }
