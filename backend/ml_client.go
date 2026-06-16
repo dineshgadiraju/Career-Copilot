@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"strings"
 )
 
 type ResumeAnalysis struct {
@@ -17,26 +18,52 @@ type ResumeAnalysis struct {
 }
 
 func AnalyzeResume(path string) (*ResumeAnalysis, error) {
-
 	file, err := os.Open(path)
+
 	if err != nil {
 		return nil, err
 	}
+
 	defer file.Close()
 
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 
-	part, _ := writer.CreateFormFile("resume", file.Name())
-	io.Copy(part, file)
+	part, err := writer.CreateFormFile("resume", file.Name())
 
-	writer.Close()
+	if err != nil {
+		return nil, err
+	}
 
-	req, _ := http.NewRequest(
+	_, err = io.Copy(part, file)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = writer.Close()
+
+	if err != nil {
+		return nil, err
+	}
+
+	mlServiceURL := os.Getenv("ML_SERVICE_URL")
+
+	if mlServiceURL == "" {
+		mlServiceURL = "http://localhost:8000"
+	}
+
+	mlServiceURL = strings.TrimRight(mlServiceURL, "/")
+
+	req, err := http.NewRequest(
 		"POST",
-		"http://localhost:8000/analyze-resume",
+		mlServiceURL+"/analyze-resume",
 		&body,
 	)
+
+	if err != nil {
+		return nil, err
+	}
 
 	req.Header.Set(
 		"Content-Type",
@@ -46,6 +73,7 @@ func AnalyzeResume(path string) (*ResumeAnalysis, error) {
 	client := &http.Client{}
 
 	resp, err := client.Do(req)
+
 	if err != nil {
 		return nil, err
 	}
@@ -56,5 +84,9 @@ func AnalyzeResume(path string) (*ResumeAnalysis, error) {
 
 	err = json.NewDecoder(resp.Body).Decode(&result)
 
-	return &result, err
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
