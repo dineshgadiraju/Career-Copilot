@@ -16,6 +16,7 @@ export default function Home() {
   const [loading, setLoading] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
   const [chatHistory, setChatHistory] = useState<
     { role: string; message: string }[]
   >([]);
