@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -57,5 +58,11 @@ func main() {
 	router.GET("/jobs/recommended", AuthMiddleware(), GetRecommendedJobs)
 	router.POST("/chat", AuthMiddleware(), CareerChat)
 
-	router.Run(":8081")
+	port := os.Getenv("PORT")
+
+	if port == "" {
+		port = "8081"
+	}
+
+	router.Run(":" + port)
 }
