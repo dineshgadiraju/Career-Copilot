@@ -13,6 +13,7 @@ export default function Home() {
   const [dashboard, setDashboard] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [liveJobs, setLiveJobs] = useState<any[]>([]);
+  const [roadmap, setRoadmap] = useState<any>(null);
   const [file, setFile] = useState<File | null>(null);
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [loading, setLoading] = useState("");
@@ -58,10 +59,7 @@ export default function Home() {
   }
 
   async function loadDashboard(currentToken = token) {
-    if (!currentToken) {
-      alert("Please login first");
-      return;
-    }
+    if (!currentToken) return alert("Please login first");
 
     setLoading("dashboard");
 
@@ -72,19 +70,13 @@ export default function Home() {
     const data = await res.json();
     setLoading("");
 
-    if (!res.ok) {
-      alert(data.error || "Failed to load dashboard");
-      return;
-    }
+    if (!res.ok) return alert(data.error || "Failed to load dashboard");
 
     setDashboard(data);
   }
 
   async function loadJobs(currentToken = token) {
-    if (!currentToken) {
-      alert("Please login first");
-      return;
-    }
+    if (!currentToken) return alert("Please login first");
 
     setLoading("jobs");
 
@@ -95,19 +87,13 @@ export default function Home() {
     const data = await res.json();
     setLoading("");
 
-    if (!res.ok) {
-      alert(data.error || "Failed to load jobs");
-      return;
-    }
+    if (!res.ok) return alert(data.error || "Failed to load jobs");
 
     setJobs(data.jobs || []);
   }
 
   async function fetchLiveJobs(currentToken = token) {
-    if (!currentToken) {
-      alert("Please login first");
-      return;
-    }
+    if (!currentToken) return alert("Please login first");
 
     setLoading("fetchLiveJobs");
 
@@ -119,19 +105,13 @@ export default function Home() {
     const data = await res.json();
     setLoading("");
 
-    if (!res.ok) {
-      alert(data.error || "Failed to fetch live jobs");
-      return;
-    }
+    if (!res.ok) return alert(data.error || "Failed to fetch live jobs");
 
     alert(`Fetched ${data.count || 0} live jobs successfully`);
   }
 
   async function loadLiveJobs(currentToken = token) {
-    if (!currentToken) {
-      alert("Please login first");
-      return;
-    }
+    if (!currentToken) return alert("Please login first");
 
     setLoading("liveJobs");
 
@@ -142,24 +122,31 @@ export default function Home() {
     const data = await res.json();
     setLoading("");
 
-    if (!res.ok) {
-      alert(data.error || "Failed to load live jobs");
-      return;
-    }
+    if (!res.ok) return alert(data.error || "Failed to load live jobs");
 
     setLiveJobs(data.jobs || []);
   }
 
-  async function uploadResume() {
-    if (!token) {
-      alert("Please login first");
-      return;
-    }
+  async function loadRoadmap(currentToken = token) {
+    if (!currentToken) return alert("Please login first");
 
-    if (!file) {
-      alert("Please select a resume PDF first");
-      return;
-    }
+    setLoading("roadmap");
+
+    const res = await fetch(`${API_BASE_URL}/roadmap`, {
+      headers: { Authorization: `Bearer ${currentToken}` },
+    });
+
+    const data = await res.json();
+    setLoading("");
+
+    if (!res.ok) return alert(data.error || "Failed to load roadmap");
+
+    setRoadmap(data);
+  }
+
+  async function uploadResume() {
+    if (!token) return alert("Please login first");
+    if (!file) return alert("Please select a resume PDF first");
 
     setLoading("upload");
 
@@ -176,23 +163,19 @@ export default function Home() {
 
     if (!res.ok) {
       setLoading("");
-      alert(data.error || "Resume upload failed");
-      return;
+      return alert(data.error || "Resume upload failed");
     }
 
     setUploadResult(data);
     await loadDashboard(token);
     await loadJobs(token);
     await loadLiveJobs(token);
+    await loadRoadmap(token);
     setLoading("");
   }
 
   async function sendMessage() {
-    if (!token) {
-      alert("Please login first");
-      return;
-    }
-
+    if (!token) return alert("Please login first");
     if (!chatMessage.trim()) return;
 
     const userMessage = chatMessage;
@@ -260,7 +243,7 @@ export default function Home() {
 
               <p className="mb-8 text-lg text-slate-300">
                 Upload your resume, get a score, discover missing skills, match
-                with static and live jobs, and chat with your AI Career Coach.
+                with static and live jobs, and get a personalized AI roadmap.
               </p>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -268,7 +251,7 @@ export default function Home() {
                   "Resume scoring",
                   "Skill extraction",
                   "Live job matching",
-                  "AI career coaching",
+                  "AI roadmap",
                 ].map((item) => (
                   <div
                     key={item}
@@ -327,9 +310,7 @@ export default function Home() {
         </div>
 
         <section className="mt-8 rounded-3xl border border-purple-500/20 bg-slate-900/80 p-6 shadow-xl">
-          <h2 className="text-2xl font-bold text-purple-300">
-            Upload Resume
-          </h2>
+          <h2 className="text-2xl font-bold text-purple-300">Upload Resume</h2>
           <p className="mb-5 text-sm text-slate-400">
             Upload a PDF resume to get score, skills, jobs, and AI advice.
           </p>
@@ -388,6 +369,13 @@ export default function Home() {
             >
               {loading === "liveJobs" ? "Loading..." : "Load Live Matches"}
             </button>
+
+            <button
+              onClick={() => loadRoadmap()}
+              className="rounded-xl bg-orange-500 px-5 py-3 font-semibold hover:bg-orange-400"
+            >
+              {loading === "roadmap" ? "Loading..." : "Career Roadmap"}
+            </button>
           </div>
         </section>
 
@@ -438,6 +426,78 @@ export default function Home() {
               resume.
             </p>
             <SkillCloud skills={missingSkills} color="yellow" />
+          </section>
+        )}
+
+        {roadmap && (
+          <section className="mt-8 rounded-3xl border border-orange-500/20 bg-slate-900/80 p-6 shadow-xl">
+            <h2 className="mb-4 text-2xl font-bold text-orange-300">
+              🚀 AI Career Roadmap
+            </h2>
+
+            <div className="mb-6">
+              <p className="text-sm text-slate-400">Target Role</p>
+              <p className="text-xl font-bold text-orange-200">
+                {roadmap.target_role}
+              </p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <h3 className="mb-3 font-semibold text-green-300">
+                  Current Skills
+                </h3>
+                <SkillCloud skills={roadmap.current_skills || []} color="blue" />
+              </div>
+
+              <div>
+                <h3 className="mb-3 font-semibold text-yellow-300">
+                  Missing Skills
+                </h3>
+                <SkillCloud skills={roadmap.missing_skills || []} color="yellow" />
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <h3 className="mb-3 font-semibold text-cyan-300">
+                90-Day Learning Plan
+              </h3>
+
+              <div className="space-y-3">
+                {roadmap.roadmap?.map((item: string, index: number) => (
+                  <div
+                    key={index}
+                    className="rounded-xl border border-white/10 bg-slate-950/60 p-3"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-6 md:grid-cols-2">
+              <div>
+                <h3 className="mb-3 font-semibold text-purple-300">
+                  Project Ideas
+                </h3>
+                <ul className="space-y-2 text-slate-300">
+                  {roadmap.project_ideas?.map((item: string, index: number) => (
+                    <li key={index}>• {item}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="mb-3 font-semibold text-pink-300">
+                  Interview Topics
+                </h3>
+                <ul className="space-y-2 text-slate-300">
+                  {roadmap.interview_topics?.map((item: string, index: number) => (
+                    <li key={index}>• {item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </section>
         )}
 
@@ -495,38 +555,42 @@ function JobCard({ job, variant }: { job: any; variant: "live" | "static" }) {
         <div>
           <h3 className="text-xl font-bold">{job.title}</h3>
           <p className="text-slate-400">{job.company}</p>
+
           {job.location && (
             <p className="text-sm text-slate-500">{job.location}</p>
           )}
+
           {job.source && (
             <p className="mt-1 text-xs text-slate-500">Source: {job.source}</p>
           )}
-        </div>
+
           <div className="mt-3 flex flex-wrap gap-2">
-          {job.usa_only && (
-            <span className="rounded-full bg-blue-500/15 px-3 py-1 text-xs text-blue-200">
-              🇺🇸 USA
-            </span>
-          )}
+            {job.usa_only && (
+              <span className="rounded-full bg-blue-500/15 px-3 py-1 text-xs text-blue-200">
+                🇺🇸 USA
+              </span>
+            )}
 
-          {job.visa_sponsorship && (
-            <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-200">
-              💼 Sponsorship
-            </span>
-          )}
+            {job.visa_sponsorship && (
+              <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-200">
+                💼 Sponsorship
+              </span>
+            )}
 
-          {job.opt_friendly && (
-            <span className="rounded-full bg-purple-500/15 px-3 py-1 text-xs text-purple-200">
-              🎓 OPT
-            </span>
-          )}
+            {job.opt_friendly && (
+              <span className="rounded-full bg-purple-500/15 px-3 py-1 text-xs text-purple-200">
+                🎓 OPT
+              </span>
+            )}
 
-          {job.stem_opt_friendly && (
-            <span className="rounded-full bg-pink-500/15 px-3 py-1 text-xs text-pink-200">
-              🚀 STEM OPT
-            </span>
-          )}
+            {job.stem_opt_friendly && (
+              <span className="rounded-full bg-pink-500/15 px-3 py-1 text-xs text-pink-200">
+                🚀 STEM OPT
+              </span>
+            )}
+          </div>
         </div>
+
         <span className={`rounded-full px-3 py-1 text-sm font-bold ${badgeClass}`}>
           {job.match_score}%
         </span>
@@ -605,6 +669,7 @@ function ChatWidget({
             {chatHistory.length === 0 ? (
               <div className="space-y-3 text-sm text-slate-400">
                 <p>Try asking:</p>
+
                 <button
                   onClick={() =>
                     setChatMessage(
@@ -615,6 +680,7 @@ function ChatWidget({
                 >
                   What should I learn next?
                 </button>
+
                 <button
                   onClick={() => setChatMessage("How can I improve my resume?")}
                   className="block rounded-xl bg-slate-800 px-3 py-2 text-left hover:bg-slate-700"
