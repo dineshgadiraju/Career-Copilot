@@ -57,6 +57,9 @@ func main() {
 	router.GET("/dashboard", AuthMiddleware(), GetDashboard)
 	router.GET("/jobs/recommended", AuthMiddleware(), GetRecommendedJobs)
 	router.POST("/chat", AuthMiddleware(), CareerChat)
+	router.POST("/jobs/fetch-live", AuthMiddleware(), FetchLiveJobs)
+	router.GET("/jobs/live-recommended", AuthMiddleware(), GetLiveRecommendedJobs)
+	router.GET("/roadmap", AuthMiddleware(), GetCareerRoadmap)
 
 	port := os.Getenv("PORT")
 

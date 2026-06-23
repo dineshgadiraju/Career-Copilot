@@ -12,6 +12,7 @@ export default function Home() {
   const [token, setToken] = useState("");
   const [dashboard, setDashboard] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
+  const [liveJobs, setLiveJobs] = useState<any[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [loading, setLoading] = useState("");
@@ -29,8 +30,10 @@ export default function Home() {
 
   const score = dashboard?.resume_score || uploadResult?.analysis?.score || 0;
   const skills = dashboard?.skills || uploadResult?.analysis?.skills || [];
+  const allJobs = [...jobs, ...liveJobs];
+
   const missingSkills = Array.from(
-    new Set(jobs.flatMap((job) => job.missing_skills || []))
+    new Set(allJobs.flatMap((job) => job.missing_skills || []))
   );
 
   async function login() {
@@ -100,6 +103,53 @@ export default function Home() {
     setJobs(data.jobs || []);
   }
 
+  async function fetchLiveJobs(currentToken = token) {
+    if (!currentToken) {
+      alert("Please login first");
+      return;
+    }
+
+    setLoading("fetchLiveJobs");
+
+    const res = await fetch(`${API_BASE_URL}/jobs/fetch-live`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${currentToken}` },
+    });
+
+    const data = await res.json();
+    setLoading("");
+
+    if (!res.ok) {
+      alert(data.error || "Failed to fetch live jobs");
+      return;
+    }
+
+    alert(`Fetched ${data.count || 0} live jobs successfully`);
+  }
+
+  async function loadLiveJobs(currentToken = token) {
+    if (!currentToken) {
+      alert("Please login first");
+      return;
+    }
+
+    setLoading("liveJobs");
+
+    const res = await fetch(`${API_BASE_URL}/jobs/live-recommended`, {
+      headers: { Authorization: `Bearer ${currentToken}` },
+    });
+
+    const data = await res.json();
+    setLoading("");
+
+    if (!res.ok) {
+      alert(data.error || "Failed to load live jobs");
+      return;
+    }
+
+    setLiveJobs(data.jobs || []);
+  }
+
   async function uploadResume() {
     if (!token) {
       alert("Please login first");
@@ -133,6 +183,7 @@ export default function Home() {
     setUploadResult(data);
     await loadDashboard(token);
     await loadJobs(token);
+    await loadLiveJobs(token);
     setLoading("");
   }
 
@@ -179,12 +230,13 @@ export default function Home() {
     <main className="min-h-screen bg-[#050816] text-white">
       <section className="relative overflow-hidden px-6 py-10">
         <div className="absolute left-1/2 top-0 h-96 w-96 -translate-x-1/2 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="mx-auto max-w-7xl relative">
+
+        <div className="relative mx-auto max-w-7xl">
           <nav className="mb-10 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur">
             <div>
               <h1 className="text-xl font-bold">AI Career Copilot</h1>
               <p className="text-xs text-slate-400">
-                Resume intelligence + job matching
+                Resume intelligence + live job matching
               </p>
             </div>
 
@@ -207,15 +259,15 @@ export default function Home() {
               </h2>
 
               <p className="mb-8 text-lg text-slate-300">
-                Upload your resume, get a resume score, discover missing skills,
-                match with jobs, and chat with your AI Career Coach.
+                Upload your resume, get a score, discover missing skills, match
+                with static and live jobs, and chat with your AI Career Coach.
               </p>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 {[
                   "Resume scoring",
                   "Skill extraction",
-                  "Job matching",
+                  "Live job matching",
                   "AI career coaching",
                 ].map((item) => (
                   <div
@@ -229,9 +281,7 @@ export default function Home() {
             </div>
 
             <section className="rounded-3xl border border-white/10 bg-slate-900/80 p-6 shadow-2xl">
-              <h2 className="mb-4 text-2xl font-bold text-cyan-300">
-                Login
-              </h2>
+              <h2 className="mb-4 text-2xl font-bold text-cyan-300">Login</h2>
 
               <div className="space-y-4">
                 <input
@@ -259,8 +309,7 @@ export default function Home() {
 
                 {token && (
                   <p className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-300">
-                    Logged in successfully. Upload your resume to generate your
-                    dashboard.
+                    Logged in successfully. Upload your resume or load jobs.
                   </p>
                 )}
               </div>
@@ -273,25 +322,17 @@ export default function Home() {
         <div className="grid gap-5 md:grid-cols-4">
           <StatCard title="Resume Score" value={`${score}%`} subtitle="Overall strength" />
           <StatCard title="Skills Found" value={skills.length} subtitle="Detected from resume" />
-          <StatCard title="Job Matches" value={jobs.length} subtitle="Recommended roles" />
-          <StatCard
-            title="Skill Gaps"
-            value={missingSkills.length}
-            subtitle="Skills to learn next"
-          />
+          <StatCard title="Total Jobs" value={allJobs.length} subtitle="Static + live matches" />
+          <StatCard title="Skill Gaps" value={missingSkills.length} subtitle="Skills to learn next" />
         </div>
 
         <section className="mt-8 rounded-3xl border border-purple-500/20 bg-slate-900/80 p-6 shadow-xl">
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-purple-300">
-                Upload Resume
-              </h2>
-              <p className="text-sm text-slate-400">
-                Upload a PDF resume to get score, skills, jobs, and AI advice.
-              </p>
-            </div>
-          </div>
+          <h2 className="text-2xl font-bold text-purple-300">
+            Upload Resume
+          </h2>
+          <p className="mb-5 text-sm text-slate-400">
+            Upload a PDF resume to get score, skills, jobs, and AI advice.
+          </p>
 
           <div
             {...getRootProps()}
@@ -331,7 +372,21 @@ export default function Home() {
               onClick={() => loadJobs()}
               className="rounded-xl bg-emerald-500 px-5 py-3 font-semibold hover:bg-emerald-400"
             >
-              {loading === "jobs" ? "Loading..." : "Load Jobs"}
+              {loading === "jobs" ? "Loading..." : "Load Static Jobs"}
+            </button>
+
+            <button
+              onClick={() => fetchLiveJobs()}
+              className="rounded-xl bg-pink-500 px-5 py-3 font-semibold hover:bg-pink-400"
+            >
+              {loading === "fetchLiveJobs" ? "Fetching..." : "Fetch Live Jobs"}
+            </button>
+
+            <button
+              onClick={() => loadLiveJobs()}
+              className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold hover:bg-cyan-400"
+            >
+              {loading === "liveJobs" ? "Loading..." : "Load Live Matches"}
             </button>
           </div>
         </section>
@@ -361,9 +416,7 @@ export default function Home() {
                   "No resume uploaded yet"}
               </InfoBlock>
 
-              <InfoBlock title="Uploads">
-                {dashboard?.uploads || 0}
-              </InfoBlock>
+              <InfoBlock title="Uploads">{dashboard?.uploads || 0}</InfoBlock>
             </div>
 
             <div className="mt-6">
@@ -381,72 +434,146 @@ export default function Home() {
               Skill Gap Analysis
             </h2>
             <p className="mb-4 text-slate-400">
-              These skills appear in matched jobs but are missing from your
+              These skills appear in recommended jobs but are missing from your
               resume.
             </p>
             <SkillCloud skills={missingSkills} color="yellow" />
           </section>
         )}
 
+        {liveJobs.length > 0 && (
+          <section className="mt-8 rounded-3xl border border-pink-500/20 bg-slate-900/80 p-6 shadow-xl">
+            <h2 className="mb-5 text-2xl font-bold text-pink-300">
+              Live Resume-Matched Jobs
+            </h2>
+
+            <div className="grid gap-5 md:grid-cols-2">
+              {liveJobs.map((job) => (
+                <JobCard key={job.id} job={job} variant="live" />
+              ))}
+            </div>
+          </section>
+        )}
+
         {jobs.length > 0 && (
           <section className="mt-8 rounded-3xl border border-emerald-500/20 bg-slate-900/80 p-6 shadow-xl">
             <h2 className="mb-5 text-2xl font-bold text-emerald-300">
-              Recommended Jobs
+              Static Resume-Matched Jobs
             </h2>
 
             <div className="grid gap-5 md:grid-cols-2">
               {jobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="rounded-2xl border border-white/10 bg-slate-950/70 p-5 transition hover:-translate-y-1 hover:border-emerald-400/40"
-                >
-                  <div className="mb-4 flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-xl font-bold">{job.title}</h3>
-                      <p className="text-slate-400">{job.company}</p>
-                    </div>
-
-                    <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-sm font-bold text-emerald-300">
-                      {job.match_score}%
-                    </span>
-                  </div>
-
-                  <p className="mb-2 text-sm text-slate-300">
-                    <strong>Matched:</strong>{" "}
-                    {job.matched_skills?.join(", ") || "None"}
-                  </p>
-
-                  <p className="mb-4 text-sm text-slate-400">
-                    <strong>Missing:</strong>{" "}
-                    {job.missing_skills?.join(", ") || "None"}
-                  </p>
-
-                  <div>
-                    <p className="mb-2 font-semibold text-yellow-300">
-                      Learning Recommendations
-                    </p>
-                    <SkillCloud
-                      skills={job.learning_recommendations || []}
-                      color="yellow"
-                    />
-                  </div>
-                  {job.apply_url && (
-                    <a
-                      href={job.apply_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-5 inline-flex rounded-xl bg-cyan-400 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-300"
-                    >
-                      Apply Now →
-                    </a>
-                  )}
-                </div>
+                <JobCard key={job.id} job={job} variant="static" />
               ))}
             </div>
           </section>
         )}
       </section>
 
+      <ChatWidget
+        chatOpen={chatOpen}
+        setChatOpen={setChatOpen}
+        chatHistory={chatHistory}
+        chatMessage={chatMessage}
+        setChatMessage={setChatMessage}
+        sendMessage={sendMessage}
+        loading={loading}
+      />
+    </main>
+  );
+}
+
+function JobCard({ job, variant }: { job: any; variant: "live" | "static" }) {
+  const badgeClass =
+    variant === "live"
+      ? "bg-pink-400/10 text-pink-300"
+      : "bg-emerald-400/10 text-emerald-300";
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-5 transition hover:-translate-y-1 hover:border-cyan-400/40">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-xl font-bold">{job.title}</h3>
+          <p className="text-slate-400">{job.company}</p>
+          {job.location && (
+            <p className="text-sm text-slate-500">{job.location}</p>
+          )}
+          {job.source && (
+            <p className="mt-1 text-xs text-slate-500">Source: {job.source}</p>
+          )}
+        </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+          {job.usa_only && (
+            <span className="rounded-full bg-blue-500/15 px-3 py-1 text-xs text-blue-200">
+              🇺🇸 USA
+            </span>
+          )}
+
+          {job.visa_sponsorship && (
+            <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-200">
+              💼 Sponsorship
+            </span>
+          )}
+
+          {job.opt_friendly && (
+            <span className="rounded-full bg-purple-500/15 px-3 py-1 text-xs text-purple-200">
+              🎓 OPT
+            </span>
+          )}
+
+          {job.stem_opt_friendly && (
+            <span className="rounded-full bg-pink-500/15 px-3 py-1 text-xs text-pink-200">
+              🚀 STEM OPT
+            </span>
+          )}
+        </div>
+        <span className={`rounded-full px-3 py-1 text-sm font-bold ${badgeClass}`}>
+          {job.match_score}%
+        </span>
+      </div>
+
+      <p className="mb-2 text-sm text-slate-300">
+        <strong>Matched:</strong> {job.matched_skills?.join(", ") || "None"}
+      </p>
+
+      <p className="mb-4 text-sm text-slate-400">
+        <strong>Missing:</strong> {job.missing_skills?.join(", ") || "None"}
+      </p>
+
+      {job.learning_recommendations?.length > 0 && (
+        <div className="mb-4">
+          <p className="mb-2 font-semibold text-yellow-300">
+            Learning Recommendations
+          </p>
+          <SkillCloud skills={job.learning_recommendations || []} color="yellow" />
+        </div>
+      )}
+
+      {job.apply_url && (
+        <a
+          href={job.apply_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex rounded-xl bg-cyan-400 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-300"
+        >
+          Apply Now →
+        </a>
+      )}
+    </div>
+  );
+}
+
+function ChatWidget({
+  chatOpen,
+  setChatOpen,
+  chatHistory,
+  chatMessage,
+  setChatMessage,
+  sendMessage,
+  loading,
+}: any) {
+  return (
+    <>
       <button
         onClick={() => setChatOpen(!chatOpen)}
         className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-pink-500 text-3xl shadow-2xl hover:bg-pink-400"
@@ -480,23 +607,23 @@ export default function Home() {
                 <p>Try asking:</p>
                 <button
                   onClick={() =>
-                    setChatMessage("What should I learn next based on my resume?")
+                    setChatMessage(
+                      "What should I learn next based on my resume?"
+                    )
                   }
                   className="block rounded-xl bg-slate-800 px-3 py-2 text-left hover:bg-slate-700"
                 >
                   What should I learn next?
                 </button>
                 <button
-                  onClick={() =>
-                    setChatMessage("How can I improve my resume?")
-                  }
+                  onClick={() => setChatMessage("How can I improve my resume?")}
                   className="block rounded-xl bg-slate-800 px-3 py-2 text-left hover:bg-slate-700"
                 >
                   How can I improve my resume?
                 </button>
               </div>
             ) : (
-              chatHistory.map((msg, index) => (
+              chatHistory.map((msg: any, index: number) => (
                 <div
                   key={index}
                   className={`mb-3 ${
@@ -542,7 +669,7 @@ export default function Home() {
           </div>
         </div>
       )}
-    </main>
+    </>
   );
 }
 
@@ -598,7 +725,10 @@ function SkillCloud({
   return (
     <div className="flex flex-wrap gap-2">
       {skills.map((skill) => (
-        <span key={skill} className={`rounded-full px-3 py-1 text-sm ${classes}`}>
+        <span
+          key={skill}
+          className={`rounded-full px-3 py-1 text-sm ${classes}`}
+        >
           {skill}
         </span>
       ))}
