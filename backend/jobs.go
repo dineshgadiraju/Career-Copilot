@@ -18,6 +18,7 @@ type JobRecommendation struct {
 	MissingSkills           []string `json:"missing_skills"`
 	LearningRecommendations []string `json:"learning_recommendations"`
 	MatchScore              int      `json:"match_score"`
+	ApplyURL                string   `json:"apply_url"`
 }
 
 func normalizeSkill(skill string) string {
@@ -63,7 +64,7 @@ func GetRecommendedJobs(c *gin.Context) {
 	rows, err := DB.Query(
 		context.Background(),
 		`
-		SELECT id, title, company, required_skills
+		SELECT id, title, company, required_skills, COALESCE(apply_url, '')
 		FROM jobs
 		`,
 	)
@@ -87,6 +88,7 @@ func GetRecommendedJobs(c *gin.Context) {
 			&job.Title,
 			&job.Company,
 			&job.RequiredSkills,
+			&job.ApplyURL,
 		)
 
 		if err != nil {
