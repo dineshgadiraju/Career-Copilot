@@ -10,7 +10,7 @@ import (
 )
 
 func Register(c *gin.Context) {
-
+	fmt.Println("=== REGISTER ENDPOINT HIT ===")
 	var req RegisterRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {

@@ -12,7 +12,6 @@ import (
 
 func main() {
 	err := godotenv.Load()
-
 	if err != nil {
 		log.Println("No .env file found")
 	}
@@ -25,30 +24,9 @@ func main() {
 			"http://localhost:3000",
 			"https://hilarious-kataifi-9685f0.netlify.app",
 		},
-		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders: []string{"Origin", "Content-Type", "Authorization"},
-	}))
-
-	router.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:3000",
-		},
-		AllowMethods: []string{
-			"GET",
-			"POST",
-			"PUT",
-			"DELETE",
-			"OPTIONS",
-		},
-		AllowHeaders: []string{
-			"Origin",
-			"Content-Type",
-			"Authorization",
-		},
-		ExposeHeaders: []string{
-			"Content-Length",
-		},
-		AllowCredentials: true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: false,
 	}))
 
 	router.GET("/health", func(c *gin.Context) {
@@ -60,19 +38,23 @@ func main() {
 	router.POST("/register", Register)
 	router.POST("/login", Login)
 	router.GET("/profile", AuthMiddleware(), GetProfile)
+
 	router.POST("/resume/upload", AuthMiddleware(), UploadResume)
 	router.GET("/resume/latest", AuthMiddleware(), GetLatestResume)
 	router.GET("/dashboard", AuthMiddleware(), GetDashboard)
+
 	router.GET("/jobs/recommended", AuthMiddleware(), GetRecommendedJobs)
-	router.POST("/chat", AuthMiddleware(), CareerChat)
 	router.POST("/jobs/fetch-live", AuthMiddleware(), FetchLiveJobs)
 	router.GET("/jobs/live-recommended", AuthMiddleware(), GetLiveRecommendedJobs)
+
 	router.GET("/roadmap", AuthMiddleware(), GetCareerRoadmap)
+	router.POST("/chat", AuthMiddleware(), CareerChat)
+
 	router.POST("/saved-jobs", AuthMiddleware(), SaveJob)
 	router.GET("/saved-jobs", AuthMiddleware(), GetSavedJobs)
 	router.PUT("/saved-jobs/:id/status", AuthMiddleware(), UpdateSavedJobStatus)
-	port := os.Getenv("PORT")
 
+	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8081"
 	}
