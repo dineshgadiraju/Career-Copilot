@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"path/filepath"
 )
 
 type ResumeAnalysis struct {
@@ -28,7 +29,7 @@ func AnalyzeResume(path string) (*ResumeAnalysis, error) {
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 
-	part, err := writer.CreateFormFile("resume", file.Name())
+	part, err := writer.CreateFormFile("resume", filepath.Base(file.Name()))
 	if err != nil {
 		return nil, err
 	}
