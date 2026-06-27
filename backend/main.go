@@ -55,6 +55,8 @@ func main() {
 	router.GET("/saved-jobs", AuthMiddleware(), GetSavedJobs)
 	router.PUT("/saved-jobs/:id/status", AuthMiddleware(), UpdateSavedJobStatus)
 
+	router.POST("/jobs/refresh-daily", AuthMiddleware(), FetchLiveJobs)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8081"
