@@ -56,6 +56,7 @@ func main() {
 	router.PUT("/saved-jobs/:id/status", AuthMiddleware(), UpdateSavedJobStatus)
 
 	router.POST("/jobs/refresh-daily", AuthMiddleware(), FetchLiveJobs)
+	router.POST("/jobs/fetch-role-based", AuthMiddleware(), FetchRoleBasedLiveJobs)
 
 	port := os.Getenv("PORT")
 	if port == "" {

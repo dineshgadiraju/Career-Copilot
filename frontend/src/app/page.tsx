@@ -162,7 +162,7 @@ export default function Home() {
     setLoading("fetchLiveJobs");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/jobs/fetch-live`, {
+      const res = await fetch(`${API_BASE_URL}/jobs/fetch-role-based`, {
         method: "POST",
         headers: { Authorization: `Bearer ${currentToken}` },
       });

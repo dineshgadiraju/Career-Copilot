@@ -438,3 +438,142 @@ func detectSTEMOPTFriendly(text string) bool {
 
 	return false
 }
+func FetchRoleBasedLiveJobs(c *gin.Context) {
+	userID := c.GetInt("user_id")
+
+	var resumeSkills []string
+
+	err := DB.QueryRow(
+		context.Background(),
+		`
+		SELECT skills
+		FROM resumes
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+		LIMIT 1
+		`,
+		userID,
+	).Scan(&resumeSkills)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "No resume found. Upload resume first.",
+		})
+		return
+	}
+
+	roleRecommendation := recommendRoleFromSkills(resumeSkills)
+	searchTerm := roleToJobSearch(roleRecommendation.RecommendedRole)
+
+	apiURL := "https://remotive.com/api/remote-jobs?limit=100&search=" + strings.ReplaceAll(searchTerm, " ", "%20")
+
+	resp, err := http.Get(apiURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch role-based jobs"})
+		return
+	}
+	defer resp.Body.Close()
+
+	var remotiveData RemotiveResponse
+	if err := json.NewDecoder(resp.Body).Decode(&remotiveData); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode role-based jobs"})
+		return
+	}
+
+	inserted := 0
+	skippedNonUSA := 0
+
+	for _, job := range remotiveData.Jobs {
+		text := job.Title + " " + job.Description + " " + job.CandidateRequiredLocation
+
+		usaOnly := detectUSAJob(job.CandidateRequiredLocation, text)
+		if !usaOnly {
+			skippedNonUSA++
+			continue
+		}
+
+		requiredSkills := extractSkillsFromText(text)
+
+		_, err := DB.Exec(
+			context.Background(),
+			`
+			INSERT INTO live_jobs(
+				external_id,
+				title,
+				company,
+				location,
+				category,
+				job_type,
+				source,
+				apply_url,
+				required_skills,
+				visa_sponsorship,
+				opt_friendly,
+				stem_opt_friendly,
+				usa_only
+			)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+			ON CONFLICT (external_id) DO UPDATE SET
+				title = EXCLUDED.title,
+				company = EXCLUDED.company,
+				location = EXCLUDED.location,
+				category = EXCLUDED.category,
+				job_type = EXCLUDED.job_type,
+				source = EXCLUDED.source,
+				apply_url = EXCLUDED.apply_url,
+				required_skills = EXCLUDED.required_skills,
+				visa_sponsorship = EXCLUDED.visa_sponsorship,
+				opt_friendly = EXCLUDED.opt_friendly,
+				stem_opt_friendly = EXCLUDED.stem_opt_friendly,
+				usa_only = EXCLUDED.usa_only
+			`,
+			strconv.Itoa(job.ID),
+			job.Title,
+			job.CompanyName,
+			job.CandidateRequiredLocation,
+			job.Category,
+			job.JobType,
+			"Remotive",
+			job.URL,
+			requiredSkills,
+			detectVisaSponsorship(text),
+			detectOPTFriendly(text),
+			detectSTEMOPTFriendly(text),
+			usaOnly,
+		)
+
+		if err == nil {
+			inserted++
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":          "Role-based USA jobs fetched successfully",
+		"recommended_role": roleRecommendation.RecommendedRole,
+		"search_term":      searchTerm,
+		"inserted":         inserted,
+		"skipped_non_usa":  skippedNonUSA,
+	})
+}
+
+func roleToJobSearch(role string) string {
+	role = strings.ToLower(role)
+
+	if strings.Contains(role, "go") || strings.Contains(role, "backend") {
+		return "backend engineer"
+	}
+
+	if strings.Contains(role, "ml") || strings.Contains(role, "ai") {
+		return "machine learning engineer"
+	}
+
+	if strings.Contains(role, "full stack") {
+		return "full stack engineer"
+	}
+
+	if strings.Contains(role, "frontend") {
+		return "frontend engineer"
+	}
+
+	return "software engineer"
+}
