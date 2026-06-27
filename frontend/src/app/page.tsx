@@ -3,8 +3,23 @@
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+const API_BASE_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081"
+)
+  .replace(/\/health\/?$/, "")
+  .replace(/\/$/, "");
+
+async function parseApiResponse(res: Response) {
+  const rawText = await res.text();
+
+  try {
+    return rawText ? JSON.parse(rawText) : {};
+  } catch {
+    throw new Error(
+      `Backend returned non-JSON response: ${rawText.slice(0, 220)}`
+    );
+  }
+}
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -42,21 +57,30 @@ export default function Home() {
 
     setLoading("register");
 
-    const res = await fetch(`${API_BASE_URL}/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const res = await fetch(`${API_BASE_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: email.split("@")[0],
+          email,
+          password,
+        }),
+      });
 
-    const data = await res.json();
-    setLoading("");
+      const data = await parseApiResponse(res);
+      setLoading("");
 
-    if (!res.ok) {
-      alert(data.error || "Registration failed");
-      return;
+      if (!res.ok) {
+        alert(data.error || "Registration failed");
+        return;
+      }
+
+      alert("Account created successfully. Please login now.");
+    } catch (err: any) {
+      setLoading("");
+      alert(err.message || "Registration failed");
     }
-
-    alert("Account created successfully. Please login now.");
   }
 
   async function login() {
@@ -64,22 +88,27 @@ export default function Home() {
 
     setLoading("login");
 
-    const res = await fetch(`${API_BASE_URL}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const res = await fetch(`${API_BASE_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const data = await res.json();
-    setLoading("");
+      const data = await parseApiResponse(res);
+      setLoading("");
 
-    if (!res.ok) {
-      alert(data.error || "Login failed");
-      return;
+      if (!res.ok) {
+        alert(data.error || "Login failed");
+        return;
+      }
+
+      setToken(data.token);
+      alert("Logged in successfully");
+    } catch (err: any) {
+      setLoading("");
+      alert(err.message || "Login failed");
     }
-
-    setToken(data.token);
-    alert("Logged in successfully");
   }
 
   async function loadDashboard(currentToken = token) {
@@ -87,16 +116,21 @@ export default function Home() {
 
     setLoading("dashboard");
 
-    const res = await fetch(`${API_BASE_URL}/dashboard`, {
-      headers: { Authorization: `Bearer ${currentToken}` },
-    });
+    try {
+      const res = await fetch(`${API_BASE_URL}/dashboard`, {
+        headers: { Authorization: `Bearer ${currentToken}` },
+      });
 
-    const data = await res.json();
-    setLoading("");
+      const data = await parseApiResponse(res);
+      setLoading("");
 
-    if (!res.ok) return alert(data.error || "Failed to load dashboard");
+      if (!res.ok) return alert(data.error || "Failed to load dashboard");
 
-    setDashboard(data);
+      setDashboard(data);
+    } catch (err: any) {
+      setLoading("");
+      alert(err.message || "Failed to load dashboard");
+    }
   }
 
   async function loadJobs(currentToken = token) {
@@ -104,16 +138,21 @@ export default function Home() {
 
     setLoading("jobs");
 
-    const res = await fetch(`${API_BASE_URL}/jobs/recommended`, {
-      headers: { Authorization: `Bearer ${currentToken}` },
-    });
+    try {
+      const res = await fetch(`${API_BASE_URL}/jobs/recommended`, {
+        headers: { Authorization: `Bearer ${currentToken}` },
+      });
 
-    const data = await res.json();
-    setLoading("");
+      const data = await parseApiResponse(res);
+      setLoading("");
 
-    if (!res.ok) return alert(data.error || "Failed to load jobs");
+      if (!res.ok) return alert(data.error || "Failed to load jobs");
 
-    setJobs(data.jobs || []);
+      setJobs(data.jobs || []);
+    } catch (err: any) {
+      setLoading("");
+      alert(err.message || "Failed to load jobs");
+    }
   }
 
   async function fetchLiveJobs(currentToken = token) {
@@ -121,17 +160,22 @@ export default function Home() {
 
     setLoading("fetchLiveJobs");
 
-    const res = await fetch(`${API_BASE_URL}/jobs/fetch-live`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${currentToken}` },
-    });
+    try {
+      const res = await fetch(`${API_BASE_URL}/jobs/fetch-live`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${currentToken}` },
+      });
 
-    const data = await res.json();
-    setLoading("");
+      const data = await parseApiResponse(res);
+      setLoading("");
 
-    if (!res.ok) return alert(data.error || "Failed to fetch live jobs");
+      if (!res.ok) return alert(data.error || "Failed to fetch live jobs");
 
-    alert(`Fetched ${data.count || 0} live jobs successfully`);
+      alert(`Fetched ${data.count || 0} live jobs successfully`);
+    } catch (err: any) {
+      setLoading("");
+      alert(err.message || "Failed to fetch live jobs");
+    }
   }
 
   async function loadLiveJobs(currentToken = token) {
@@ -139,16 +183,21 @@ export default function Home() {
 
     setLoading("liveJobs");
 
-    const res = await fetch(`${API_BASE_URL}/jobs/live-recommended`, {
-      headers: { Authorization: `Bearer ${currentToken}` },
-    });
+    try {
+      const res = await fetch(`${API_BASE_URL}/jobs/live-recommended`, {
+        headers: { Authorization: `Bearer ${currentToken}` },
+      });
 
-    const data = await res.json();
-    setLoading("");
+      const data = await parseApiResponse(res);
+      setLoading("");
 
-    if (!res.ok) return alert(data.error || "Failed to load live jobs");
+      if (!res.ok) return alert(data.error || "Failed to load live jobs");
 
-    setLiveJobs(data.jobs || []);
+      setLiveJobs(data.jobs || []);
+    } catch (err: any) {
+      setLoading("");
+      alert(err.message || "Failed to load live jobs");
+    }
   }
 
   async function loadRoadmap(currentToken = token) {
@@ -156,16 +205,21 @@ export default function Home() {
 
     setLoading("roadmap");
 
-    const res = await fetch(`${API_BASE_URL}/roadmap`, {
-      headers: { Authorization: `Bearer ${currentToken}` },
-    });
+    try {
+      const res = await fetch(`${API_BASE_URL}/roadmap`, {
+        headers: { Authorization: `Bearer ${currentToken}` },
+      });
 
-    const data = await res.json();
-    setLoading("");
+      const data = await parseApiResponse(res);
+      setLoading("");
 
-    if (!res.ok) return alert(data.error || "Failed to load roadmap");
+      if (!res.ok) return alert(data.error || "Failed to load roadmap");
 
-    setRoadmap(data);
+      setRoadmap(data);
+    } catch (err: any) {
+      setLoading("");
+      alert(err.message || "Failed to load roadmap");
+    }
   }
 
   async function uploadResume() {
@@ -177,25 +231,30 @@ export default function Home() {
     const formData = new FormData();
     formData.append("resume", file);
 
-    const res = await fetch(`${API_BASE_URL}/resume/upload`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
+    try {
+      const res = await fetch(`${API_BASE_URL}/resume/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
 
-    const data = await res.json();
+      const data = await parseApiResponse(res);
 
-    if (!res.ok) {
+      if (!res.ok) {
+        setLoading("");
+        return alert(data.error || "Resume upload failed");
+      }
+
+      setUploadResult(data);
+      await loadDashboard(token);
+      await loadJobs(token);
+      await loadLiveJobs(token);
+      await loadRoadmap(token);
       setLoading("");
-      return alert(data.error || "Resume upload failed");
+    } catch (err: any) {
+      setLoading("");
+      alert(err.message || "Failed to analyze resume");
     }
-
-    setUploadResult(data);
-    await loadDashboard(token);
-    await loadJobs(token);
-    await loadLiveJobs(token);
-    await loadRoadmap(token);
-    setLoading("");
   }
 
   async function sendMessage() {
@@ -212,61 +271,83 @@ export default function Home() {
     setChatMessage("");
     setLoading("chat");
 
-    const res = await fetch(`${API_BASE_URL}/chat`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ message: userMessage }),
-    });
+    try {
+      const res = await fetch(`${API_BASE_URL}/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ message: userMessage }),
+      });
 
-    const data = await res.json();
-    setLoading("");
+      const data = await parseApiResponse(res);
+      setLoading("");
 
-    setChatHistory((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        message: res.ok ? data.reply : data.error || "Something went wrong.",
-      },
-    ]);
+      setChatHistory((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          message: res.ok ? data.reply : data.error || "Something went wrong.",
+        },
+      ]);
+    } catch (err: any) {
+      setLoading("");
+      setChatHistory((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          message: err.message || "Something went wrong.",
+        },
+      ]);
+    }
   }
 
   return (
-    <main className="min-h-screen bg-[#030712] text-white">
+    <main className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-violet-50 text-slate-950">
       <section className="relative overflow-hidden px-6 py-8">
-        <div className="absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute right-0 top-40 h-80 w-80 rounded-full bg-purple-500/20 blur-3xl" />
+        <div className="absolute left-[-140px] top-[-140px] h-[420px] w-[420px] rounded-full bg-sky-200/70 blur-3xl" />
+        <div className="absolute right-[-120px] top-20 h-[420px] w-[420px] rounded-full bg-violet-200/70 blur-3xl" />
+        <div className="absolute bottom-0 left-1/2 h-[300px] w-[500px] -translate-x-1/2 rounded-full bg-emerald-100/80 blur-3xl" />
 
         <div className="relative mx-auto max-w-7xl">
-          <nav className="mb-10 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur">
+          <nav className="mb-10 flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white/80 px-6 py-5 shadow-sm backdrop-blur md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-2xl font-black">AI Career Copilot</h1>
-              <p className="text-xs text-slate-400">
+              <h1 className="text-2xl font-black text-slate-950">
+                AI Career Copilot
+              </h1>
+              <p className="text-sm text-slate-500">
                 Resume intelligence • AI roadmap • USA job matching
               </p>
             </div>
 
-            <button
-              onClick={() => setChatOpen(true)}
-              className="rounded-full bg-cyan-400 px-5 py-2 font-bold text-slate-950 shadow-lg shadow-cyan-500/20 hover:bg-cyan-300"
-            >
-              Ask AI Coach
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href="#upload"
+                className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-slate-300 transition hover:-translate-y-0.5"
+              >
+                Analyze Resume
+              </a>
+              <button
+                onClick={() => setChatOpen(true)}
+                className="rounded-full bg-sky-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-sky-200 transition hover:-translate-y-0.5 hover:bg-sky-600"
+              >
+                Ask AI Coach
+              </button>
+            </div>
           </nav>
 
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-8 shadow-2xl backdrop-blur">
-              <p className="mb-4 inline-flex rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-200">
+            <div className="rounded-[2rem] border border-slate-200 bg-white/85 p-8 shadow-xl shadow-slate-200/70 backdrop-blur">
+              <p className="mb-4 inline-flex rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-700">
                 🚀 Full-stack AI career platform
               </p>
 
-              <h2 className="mb-5 max-w-3xl text-5xl font-black leading-tight md:text-6xl">
+              <h2 className="mb-5 max-w-3xl text-5xl font-black leading-tight tracking-tight text-slate-950 md:text-6xl">
                 Turn your resume into a smarter job-search engine.
               </h2>
 
-              <p className="mb-8 max-w-2xl text-lg leading-8 text-slate-300">
+              <p className="mb-8 max-w-2xl text-lg leading-8 text-slate-600">
                 Upload your resume, get instant skill analysis, discover missing
                 skills, find USA-based job matches, and get a personalized AI
                 roadmap for your next software role.
@@ -274,14 +355,14 @@ export default function Home() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 {[
-                  "AI resume scoring",
-                  "USA job recommendations",
-                  "F1 / OPT / sponsorship tags",
-                  "Personalized career roadmap",
-                ].map((item) => (
+                  ["AI resume scoring", "bg-sky-50 text-sky-700"],
+                  ["USA job recommendations", "bg-emerald-50 text-emerald-700"],
+                  ["F1 / OPT / sponsorship tags", "bg-violet-50 text-violet-700"],
+                  ["Personalized career roadmap", "bg-orange-50 text-orange-700"],
+                ].map(([item, classes]) => (
                   <div
                     key={item}
-                    className="rounded-2xl border border-white/10 bg-slate-950/60 p-4 font-semibold text-slate-200"
+                    className={`rounded-2xl border border-slate-200 p-4 font-bold ${classes}`}
                   >
                     ✅ {item}
                   </div>
@@ -289,11 +370,11 @@ export default function Home() {
               </div>
             </div>
 
-            <section className="rounded-[2rem] border border-white/10 bg-slate-900/90 p-6 shadow-2xl">
-              <h2 className="mb-2 text-2xl font-black text-cyan-300">
+            <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/80">
+              <h2 className="mb-2 text-2xl font-black text-slate-950">
                 Get Started
               </h2>
-              <p className="mb-5 text-sm text-slate-400">
+              <p className="mb-5 text-sm text-slate-500">
                 Create an account or login to analyze your resume.
               </p>
 
@@ -303,7 +384,7 @@ export default function Home() {
                   value={email}
                   placeholder="Email address"
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl bg-slate-800 px-4 py-3 outline-none ring-1 ring-slate-700 focus:ring-2 focus:ring-cyan-400"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100"
                 />
 
                 <input
@@ -311,19 +392,19 @@ export default function Home() {
                   value={password}
                   placeholder="Password"
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl bg-slate-800 px-4 py-3 outline-none ring-1 ring-slate-700 focus:ring-2 focus:ring-cyan-400"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100"
                 />
 
                 <button
                   onClick={login}
-                  className="w-full rounded-xl bg-cyan-400 px-5 py-3 font-black text-slate-950 hover:bg-cyan-300"
+                  className="w-full rounded-xl bg-slate-950 px-5 py-3 font-black text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
                 >
                   {loading === "login" ? "Logging in..." : "Login"}
                 </button>
 
                 <button
                   onClick={register}
-                  className="w-full rounded-xl border border-cyan-400 px-5 py-3 font-black text-cyan-300 hover:bg-cyan-400 hover:text-slate-950"
+                  className="w-full rounded-xl border border-sky-200 bg-sky-50 px-5 py-3 font-black text-sky-700 transition hover:-translate-y-0.5 hover:bg-sky-100"
                 >
                   {loading === "register"
                     ? "Creating account..."
@@ -331,7 +412,7 @@ export default function Home() {
                 </button>
 
                 {token && (
-                  <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-300">
+                  <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
                     ✅ Logged in successfully. Upload your resume to start.
                   </p>
                 )}
@@ -343,17 +424,20 @@ export default function Home() {
 
       <section className="mx-auto max-w-7xl px-6 pb-20">
         <div className="grid gap-5 md:grid-cols-4">
-          <StatCard title="Resume Score" value={`${score}%`} subtitle="Overall strength" />
-          <StatCard title="Skills Found" value={skills.length} subtitle="Detected from resume" />
-          <StatCard title="Total Jobs" value={allJobs.length} subtitle="Static + live matches" />
-          <StatCard title="Skill Gaps" value={missingSkills.length} subtitle="Skills to learn next" />
+          <StatCard title="Resume Score" value={`${score}%`} subtitle="Overall strength" color="sky" />
+          <StatCard title="Skills Found" value={skills.length} subtitle="Detected from resume" color="emerald" />
+          <StatCard title="Total Jobs" value={allJobs.length} subtitle="Static + live matches" color="violet" />
+          <StatCard title="Skill Gaps" value={missingSkills.length} subtitle="Skills to learn next" color="orange" />
         </div>
 
-        <section className="mt-8 rounded-[2rem] border border-purple-500/20 bg-slate-900/80 p-6 shadow-xl">
-          <h2 className="text-2xl font-black text-purple-300">
+        <section
+          id="upload"
+          className="mt-8 rounded-[2rem] border border-violet-100 bg-white p-6 shadow-xl shadow-violet-100/70"
+        >
+          <h2 className="text-2xl font-black text-slate-950">
             Upload Resume
           </h2>
-          <p className="mb-5 text-sm text-slate-400">
+          <p className="mb-5 text-sm text-slate-500">
             Upload a PDF resume to generate your score, skills, roadmap, and job
             matches.
           </p>
@@ -362,58 +446,60 @@ export default function Home() {
             {...getRootProps()}
             className={`cursor-pointer rounded-[2rem] border-2 border-dashed p-10 text-center transition ${
               isDragActive
-                ? "border-purple-300 bg-purple-500/20"
-                : "border-purple-400/50 bg-slate-950/60 hover:border-purple-300"
+                ? "border-violet-400 bg-violet-50"
+                : "border-violet-200 bg-violet-50/60 hover:border-violet-400 hover:bg-violet-50"
             }`}
           >
             <input {...getInputProps()} />
-            <p className="text-xl font-black text-purple-200">
+            <p className="text-xl font-black text-violet-700">
               📄 Drop your resume PDF here
             </p>
-            <p className="mt-2 text-slate-400">or click to browse</p>
+            <p className="mt-2 text-slate-500">or click to browse</p>
 
             {file && (
-              <p className="mt-4 text-emerald-300">Selected: {file.name}</p>
+              <p className="mt-4 font-semibold text-emerald-700">
+                Selected: {file.name}
+              </p>
             )}
           </div>
 
           <div className="mt-5 flex flex-wrap gap-4">
-            <ActionButton onClick={uploadResume} active={loading === "upload"}>
+            <ActionButton onClick={uploadResume} active={loading === "upload"} tone="violet">
               {loading === "upload" ? "Analyzing..." : "Upload & Analyze"}
             </ActionButton>
 
-            <ActionButton onClick={() => loadDashboard()} active={loading === "dashboard"}>
+            <ActionButton onClick={() => loadDashboard()} active={loading === "dashboard"} tone="sky">
               {loading === "dashboard" ? "Loading..." : "Load Dashboard"}
             </ActionButton>
 
-            <ActionButton onClick={() => fetchLiveJobs()} active={loading === "fetchLiveJobs"}>
+            <ActionButton onClick={() => fetchLiveJobs()} active={loading === "fetchLiveJobs"} tone="pink">
               {loading === "fetchLiveJobs" ? "Fetching..." : "Fetch Live Jobs"}
             </ActionButton>
 
-            <ActionButton onClick={() => loadLiveJobs()} active={loading === "liveJobs"}>
+            <ActionButton onClick={() => loadLiveJobs()} active={loading === "liveJobs"} tone="emerald">
               {loading === "liveJobs" ? "Loading..." : "Load Live Matches"}
             </ActionButton>
 
-            <ActionButton onClick={() => loadRoadmap()} active={loading === "roadmap"}>
+            <ActionButton onClick={() => loadRoadmap()} active={loading === "roadmap"} tone="orange">
               {loading === "roadmap" ? "Loading..." : "Career Roadmap"}
             </ActionButton>
           </div>
         </section>
 
         {(dashboard || uploadResult) && (
-          <section className="mt-8 rounded-[2rem] border border-cyan-500/20 bg-slate-900/80 p-6 shadow-xl">
-            <h2 className="mb-4 text-2xl font-black text-cyan-300">
+          <section className="mt-8 rounded-[2rem] border border-sky-100 bg-white p-6 shadow-xl shadow-sky-100/70">
+            <h2 className="mb-4 text-2xl font-black text-slate-950">
               Resume Intelligence
             </h2>
 
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-slate-300">Resume Strength</span>
-              <span className="text-3xl font-black text-cyan-300">{score}%</span>
+              <span className="font-semibold text-slate-600">Resume Strength</span>
+              <span className="text-3xl font-black text-sky-600">{score}%</span>
             </div>
 
-            <div className="h-5 overflow-hidden rounded-full bg-slate-800">
+            <div className="h-5 overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-red-500 via-yellow-400 to-emerald-400"
+                className="h-full rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-emerald-500"
                 style={{ width: `${score}%` }}
               />
             </div>
@@ -429,7 +515,7 @@ export default function Home() {
             </div>
 
             <div className="mt-6">
-              <h3 className="mb-3 font-bold text-blue-300">
+              <h3 className="mb-3 font-bold text-slate-700">
                 Detected Skills
               </h3>
               <SkillCloud skills={skills} color="blue" />
@@ -438,11 +524,11 @@ export default function Home() {
         )}
 
         {missingSkills.length > 0 && (
-          <section className="mt-8 rounded-[2rem] border border-yellow-500/20 bg-slate-900/80 p-6 shadow-xl">
-            <h2 className="mb-3 text-2xl font-black text-yellow-300">
+          <section className="mt-8 rounded-[2rem] border border-yellow-100 bg-white p-6 shadow-xl shadow-yellow-100/70">
+            <h2 className="mb-3 text-2xl font-black text-slate-950">
               Skill Gap Analysis
             </h2>
-            <p className="mb-4 text-slate-400">
+            <p className="mb-4 text-slate-500">
               These skills appear in recommended jobs but are missing from your
               resume.
             </p>
@@ -451,28 +537,28 @@ export default function Home() {
         )}
 
         {roadmap && (
-          <section className="mt-8 rounded-[2rem] border border-orange-500/20 bg-slate-900/80 p-6 shadow-xl">
-            <h2 className="mb-4 text-2xl font-black text-orange-300">
+          <section className="mt-8 rounded-[2rem] border border-orange-100 bg-white p-6 shadow-xl shadow-orange-100/70">
+            <h2 className="mb-4 text-2xl font-black text-slate-950">
               🚀 AI Career Roadmap
             </h2>
 
-            <div className="mb-6">
-              <p className="text-sm text-slate-400">Target Role</p>
-              <p className="text-xl font-black text-orange-200">
+            <div className="mb-6 rounded-2xl bg-orange-50 p-4">
+              <p className="text-sm font-semibold text-orange-600">Target Role</p>
+              <p className="text-xl font-black text-orange-800">
                 {roadmap.target_role}
               </p>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <h3 className="mb-3 font-bold text-green-300">
+                <h3 className="mb-3 font-bold text-emerald-700">
                   Current Skills
                 </h3>
                 <SkillCloud skills={roadmap.current_skills || []} color="blue" />
               </div>
 
               <div>
-                <h3 className="mb-3 font-bold text-yellow-300">
+                <h3 className="mb-3 font-bold text-yellow-700">
                   Missing Skills
                 </h3>
                 <SkillCloud skills={roadmap.missing_skills || []} color="yellow" />
@@ -480,7 +566,7 @@ export default function Home() {
             </div>
 
             <div className="mt-6">
-              <h3 className="mb-3 font-bold text-cyan-300">
+              <h3 className="mb-3 font-bold text-slate-700">
                 90-Day Learning Plan
               </h3>
 
@@ -488,7 +574,7 @@ export default function Home() {
                 {roadmap.roadmap?.map((item: string, index: number) => (
                   <div
                     key={index}
-                    className="rounded-xl border border-white/10 bg-slate-950/60 p-4 text-slate-300"
+                    className="rounded-xl border border-orange-100 bg-orange-50/70 p-4 text-slate-700"
                   >
                     {item}
                   </div>
@@ -499,8 +585,8 @@ export default function Home() {
         )}
 
         {liveJobs.length > 0 && (
-          <section className="mt-8 rounded-[2rem] border border-pink-500/20 bg-slate-900/80 p-6 shadow-xl">
-            <h2 className="mb-5 text-2xl font-black text-pink-300">
+          <section className="mt-8 rounded-[2rem] border border-pink-100 bg-white p-6 shadow-xl shadow-pink-100/70">
+            <h2 className="mb-5 text-2xl font-black text-slate-950">
               Live USA Resume-Matched Jobs
             </h2>
 
@@ -513,8 +599,8 @@ export default function Home() {
         )}
 
         {jobs.length > 0 && (
-          <section className="mt-8 rounded-[2rem] border border-emerald-500/20 bg-slate-900/80 p-6 shadow-xl">
-            <h2 className="mb-5 text-2xl font-black text-emerald-300">
+          <section className="mt-8 rounded-[2rem] border border-emerald-100 bg-white p-6 shadow-xl shadow-emerald-100/70">
+            <h2 className="mb-5 text-2xl font-black text-slate-950">
               Static Resume-Matched Jobs
             </h2>
 
@@ -544,18 +630,26 @@ function ActionButton({
   children,
   onClick,
   active,
+  tone = "sky",
 }: {
   children: React.ReactNode;
   onClick: () => void;
   active?: boolean;
+  tone?: "sky" | "emerald" | "violet" | "orange" | "pink";
 }) {
+  const tones = {
+    sky: "bg-sky-500 hover:bg-sky-600 shadow-sky-100",
+    emerald: "bg-emerald-500 hover:bg-emerald-600 shadow-emerald-100",
+    violet: "bg-violet-500 hover:bg-violet-600 shadow-violet-100",
+    orange: "bg-orange-500 hover:bg-orange-600 shadow-orange-100",
+    pink: "bg-pink-500 hover:bg-pink-600 shadow-pink-100",
+  };
+
   return (
     <button
       onClick={onClick}
-      className={`rounded-xl px-5 py-3 font-bold transition ${
-        active
-          ? "bg-white text-slate-950"
-          : "bg-white/10 text-white hover:bg-white/20"
+      className={`rounded-xl px-5 py-3 font-bold text-white shadow-lg transition hover:-translate-y-0.5 ${
+        active ? "bg-slate-950" : tones[tone]
       }`}
     >
       {children}
@@ -566,42 +660,42 @@ function ActionButton({
 function JobCard({ job, variant }: { job: any; variant: "live" | "static" }) {
   const badgeClass =
     variant === "live"
-      ? "bg-pink-400/10 text-pink-300"
-      : "bg-emerald-400/10 text-emerald-300";
+      ? "bg-pink-50 text-pink-700 border-pink-100"
+      : "bg-emerald-50 text-emerald-700 border-emerald-100";
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-5 transition hover:-translate-y-1 hover:border-cyan-400/40 hover:shadow-xl">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-xl font-black">{job.title}</h3>
-          <p className="text-slate-400">{job.company}</p>
+          <h3 className="text-xl font-black text-slate-950">{job.title}</h3>
+          <p className="font-semibold text-slate-600">{job.company}</p>
 
           {job.location && (
             <p className="text-sm text-slate-500">{job.location}</p>
           )}
 
           {job.source && (
-            <p className="mt-1 text-xs text-slate-500">Source: {job.source}</p>
+            <p className="mt-1 text-xs text-slate-400">Source: {job.source}</p>
           )}
 
           <div className="mt-3 flex flex-wrap gap-2">
-            {job.usa_only && <Badge>🇺🇸 USA</Badge>}
-            {job.visa_sponsorship && <Badge>💼 Sponsorship</Badge>}
-            {job.opt_friendly && <Badge>🎓 OPT</Badge>}
-            {job.stem_opt_friendly && <Badge>🚀 STEM OPT</Badge>}
+            {job.usa_only && <Badge tone="sky">🇺🇸 USA</Badge>}
+            {job.visa_sponsorship && <Badge tone="emerald">💼 Sponsorship</Badge>}
+            {job.opt_friendly && <Badge tone="violet">🎓 OPT</Badge>}
+            {job.stem_opt_friendly && <Badge tone="pink">🚀 STEM OPT</Badge>}
           </div>
         </div>
 
-        <span className={`rounded-full px-3 py-1 text-sm font-black ${badgeClass}`}>
+        <span className={`rounded-full border px-3 py-1 text-sm font-black ${badgeClass}`}>
           {job.match_score}%
         </span>
       </div>
 
-      <p className="mb-2 text-sm text-slate-300">
+      <p className="mb-2 text-sm text-slate-700">
         <strong>Matched:</strong> {job.matched_skills?.join(", ") || "None"}
       </p>
 
-      <p className="mb-4 text-sm text-slate-400">
+      <p className="mb-4 text-sm text-slate-500">
         <strong>Missing:</strong> {job.missing_skills?.join(", ") || "None"}
       </p>
 
@@ -610,7 +704,7 @@ function JobCard({ job, variant }: { job: any; variant: "live" | "static" }) {
           href={job.apply_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex rounded-xl bg-cyan-400 px-4 py-2 font-bold text-slate-950 hover:bg-cyan-300"
+          className="inline-flex rounded-xl bg-slate-950 px-4 py-2 font-bold text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
         >
           Apply Now →
         </a>
@@ -619,9 +713,23 @@ function JobCard({ job, variant }: { job: any; variant: "live" | "static" }) {
   );
 }
 
-function Badge({ children }: { children: React.ReactNode }) {
+function Badge({
+  children,
+  tone = "sky",
+}: {
+  children: React.ReactNode;
+  tone?: "sky" | "emerald" | "violet" | "orange" | "pink";
+}) {
+  const tones = {
+    sky: "bg-sky-50 text-sky-700 border-sky-100",
+    emerald: "bg-emerald-50 text-emerald-700 border-emerald-100",
+    violet: "bg-violet-50 text-violet-700 border-violet-100",
+    orange: "bg-orange-50 text-orange-700 border-orange-100",
+    pink: "bg-pink-50 text-pink-700 border-pink-100",
+  };
+
   return (
-    <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-200">
+    <span className={`rounded-full border px-3 py-1 text-xs font-bold ${tones[tone]}`}>
       {children}
     </span>
   );
@@ -648,27 +756,27 @@ function ChatWidget({
     <>
       <button
         onClick={() => setChatOpen(!chatOpen)}
-        className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-3xl shadow-2xl shadow-pink-500/30 transition hover:scale-105"
+        className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-sky-500 to-violet-500 text-3xl shadow-2xl shadow-sky-200 transition hover:scale-105"
         aria-label="Open AI Career Coach"
       >
         🤖
       </button>
 
       {chatOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-[420px] max-w-[92vw] overflow-hidden rounded-[2rem] border border-pink-500/30 bg-slate-950 shadow-2xl">
-          <div className="flex items-center justify-between border-b border-slate-800 bg-white/[0.04] p-4">
+        <div className="fixed bottom-24 right-6 z-50 w-[420px] max-w-[92vw] overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-sky-50 p-4">
             <div>
-              <h2 className="text-lg font-black text-pink-300">
+              <h2 className="text-lg font-black text-slate-950">
                 AI Career Coach
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500">
                 Ask about resumes, jobs, skills, and interviews
               </p>
             </div>
 
             <button
               onClick={() => setChatOpen(false)}
-              className="rounded-full px-3 py-1 text-slate-400 hover:bg-white/10 hover:text-white"
+              className="rounded-full px-3 py-1 text-slate-500 hover:bg-white hover:text-slate-950"
               aria-label="Close AI Career Coach"
             >
               ✕
@@ -677,8 +785,8 @@ function ChatWidget({
 
           <div className="h-80 overflow-y-auto p-4">
             {chatHistory.length === 0 ? (
-              <div className="space-y-3 text-sm text-slate-400">
-                <p className="font-semibold text-slate-300">Try asking:</p>
+              <div className="space-y-3 text-sm text-slate-500">
+                <p className="font-semibold text-slate-700">Try asking:</p>
 
                 <button
                   onClick={() =>
@@ -686,14 +794,14 @@ function ChatWidget({
                       "What should I learn next based on my resume?"
                     )
                   }
-                  className="block w-full rounded-xl bg-slate-800 px-3 py-2 text-left hover:bg-slate-700"
+                  className="block w-full rounded-xl bg-slate-50 px-3 py-2 text-left text-slate-700 hover:bg-sky-50"
                 >
                   What should I learn next?
                 </button>
 
                 <button
                   onClick={() => setChatMessage("Which live jobs fit me best?")}
-                  className="block w-full rounded-xl bg-slate-800 px-3 py-2 text-left hover:bg-slate-700"
+                  className="block w-full rounded-xl bg-slate-50 px-3 py-2 text-left text-slate-700 hover:bg-sky-50"
                 >
                   Which live jobs fit me best?
                 </button>
@@ -704,7 +812,7 @@ function ChatWidget({
                       "How can I improve my resume for backend roles?"
                     )
                   }
-                  className="block w-full rounded-xl bg-slate-800 px-3 py-2 text-left hover:bg-slate-700"
+                  className="block w-full rounded-xl bg-slate-50 px-3 py-2 text-left text-slate-700 hover:bg-sky-50"
                 >
                   How can I improve my resume?
                 </button>
@@ -720,8 +828,8 @@ function ChatWidget({
                   <div
                     className={`inline-block max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm leading-6 ${
                       msg.role === "user"
-                        ? "bg-cyan-400 text-slate-950"
-                        : "bg-slate-800 text-white"
+                        ? "bg-sky-500 text-white"
+                        : "bg-slate-100 text-slate-800"
                     }`}
                   >
                     {msg.message}
@@ -731,11 +839,13 @@ function ChatWidget({
             )}
 
             {loading === "chat" && (
-              <p className="text-sm text-pink-300">Coach is typing...</p>
+              <p className="text-sm font-semibold text-violet-600">
+                Coach is typing...
+              </p>
             )}
           </div>
 
-          <div className="flex gap-2 border-t border-slate-800 p-4">
+          <div className="flex gap-2 border-t border-slate-200 p-4">
             <input
               type="text"
               value={chatMessage}
@@ -744,12 +854,12 @@ function ChatWidget({
                 if (e.key === "Enter") sendMessage();
               }}
               placeholder="Ask your AI Career Coach..."
-              className="flex-1 rounded-xl bg-slate-800 px-4 py-3 text-white outline-none ring-1 ring-slate-700 focus:ring-2 focus:ring-pink-400"
+              className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100"
             />
 
             <button
               onClick={sendMessage}
-              className="rounded-xl bg-pink-500 px-4 py-3 font-bold hover:bg-pink-400"
+              className="rounded-xl bg-violet-500 px-4 py-3 font-bold text-white hover:bg-violet-600"
             >
               Send
             </button>
@@ -764,14 +874,25 @@ function StatCard({
   title,
   value,
   subtitle,
+  color,
 }: {
   title: string;
   value: string | number;
   subtitle: string;
+  color: "sky" | "emerald" | "violet" | "orange";
 }) {
+  const colors = {
+    sky: "from-sky-50 to-white text-sky-600 border-sky-100",
+    emerald: "from-emerald-50 to-white text-emerald-600 border-emerald-100",
+    violet: "from-violet-50 to-white text-violet-600 border-violet-100",
+    orange: "from-orange-50 to-white text-orange-600 border-orange-100",
+  };
+
   return (
-    <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-xl backdrop-blur transition hover:-translate-y-1 hover:bg-white/[0.08]">
-      <p className="text-sm text-slate-400">{title}</p>
+    <div
+      className={`rounded-[2rem] border bg-gradient-to-br p-5 shadow-lg shadow-slate-100 transition hover:-translate-y-1 ${colors[color]}`}
+    >
+      <p className="text-sm font-semibold text-slate-500">{title}</p>
       <p className="mt-2 text-3xl font-black">{value}</p>
       <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
     </div>
@@ -786,9 +907,9 @@ function InfoBlock({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-      <p className="text-sm text-slate-400">{title}</p>
-      <p className="mt-2 break-words font-semibold">{children}</p>
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <p className="text-sm font-semibold text-slate-500">{title}</p>
+      <p className="mt-2 break-words font-bold text-slate-800">{children}</p>
     </div>
   );
 }
@@ -802,8 +923,8 @@ function SkillCloud({
 }) {
   const classes =
     color === "blue"
-      ? "bg-blue-500/15 text-blue-200"
-      : "bg-yellow-500/15 text-yellow-200";
+      ? "bg-sky-50 text-sky-700 border-sky-100"
+      : "bg-yellow-50 text-yellow-700 border-yellow-100";
 
   if (!skills || skills.length === 0) {
     return <p className="text-sm text-slate-500">No skills found yet.</p>;
@@ -814,7 +935,7 @@ function SkillCloud({
       {skills.map((skill) => (
         <span
           key={skill}
-          className={`rounded-full px-3 py-1 text-sm font-semibold ${classes}`}
+          className={`rounded-full border px-3 py-1 text-sm font-bold ${classes}`}
         >
           {skill}
         </span>
