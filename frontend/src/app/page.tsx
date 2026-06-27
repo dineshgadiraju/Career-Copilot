@@ -7,8 +7,8 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
 
 export default function Home() {
-  const [email, setEmail] = useState("dinesh-prod@test.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
   const [dashboard, setDashboard] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
@@ -37,7 +37,31 @@ export default function Home() {
     new Set(allJobs.flatMap((job) => job.missing_skills || []))
   );
 
+  async function register() {
+    if (!email || !password) return alert("Enter email and password");
+
+    setLoading("register");
+
+    const res = await fetch(`${API_BASE_URL}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+    setLoading("");
+
+    if (!res.ok) {
+      alert(data.error || "Registration failed");
+      return;
+    }
+
+    alert("Account created successfully. Please login now.");
+  }
+
   async function login() {
+    if (!email || !password) return alert("Enter email and password");
+
     setLoading("login");
 
     const res = await fetch(`${API_BASE_URL}/login`, {
@@ -210,52 +234,54 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#050816] text-white">
-      <section className="relative overflow-hidden px-6 py-10">
-        <div className="absolute left-1/2 top-0 h-96 w-96 -translate-x-1/2 rounded-full bg-cyan-500/20 blur-3xl" />
+    <main className="min-h-screen bg-[#030712] text-white">
+      <section className="relative overflow-hidden px-6 py-8">
+        <div className="absolute left-1/2 top-0 h-[500px] w-[500px] -translate-x-1/2 rounded-full bg-cyan-500/20 blur-3xl" />
+        <div className="absolute right-0 top-40 h-80 w-80 rounded-full bg-purple-500/20 blur-3xl" />
 
         <div className="relative mx-auto max-w-7xl">
           <nav className="mb-10 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur">
             <div>
-              <h1 className="text-xl font-bold">AI Career Copilot</h1>
+              <h1 className="text-2xl font-black">AI Career Copilot</h1>
               <p className="text-xs text-slate-400">
-                Resume intelligence + live job matching
+                Resume intelligence • AI roadmap • USA job matching
               </p>
             </div>
 
             <button
               onClick={() => setChatOpen(true)}
-              className="rounded-full bg-cyan-400 px-5 py-2 font-semibold text-slate-950 hover:bg-cyan-300"
+              className="rounded-full bg-cyan-400 px-5 py-2 font-bold text-slate-950 shadow-lg shadow-cyan-500/20 hover:bg-cyan-300"
             >
               Ask AI Coach
             </button>
           </nav>
 
-          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur">
-              <p className="mb-4 inline-flex rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-200">
-                Built for software job seekers
+          <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-8 shadow-2xl backdrop-blur">
+              <p className="mb-4 inline-flex rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-200">
+                🚀 Full-stack AI career platform
               </p>
 
-              <h2 className="mb-5 text-5xl font-extrabold leading-tight">
-                Land better tech jobs with an AI-powered career assistant.
+              <h2 className="mb-5 max-w-3xl text-5xl font-black leading-tight md:text-6xl">
+                Turn your resume into a smarter job-search engine.
               </h2>
 
-              <p className="mb-8 text-lg text-slate-300">
-                Upload your resume, get a score, discover missing skills, match
-                with static and live jobs, and get a personalized AI roadmap.
+              <p className="mb-8 max-w-2xl text-lg leading-8 text-slate-300">
+                Upload your resume, get instant skill analysis, discover missing
+                skills, find USA-based job matches, and get a personalized AI
+                roadmap for your next software role.
               </p>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 {[
-                  "Resume scoring",
-                  "Skill extraction",
-                  "Live job matching",
-                  "AI roadmap",
+                  "AI resume scoring",
+                  "USA job recommendations",
+                  "F1 / OPT / sponsorship tags",
+                  "Personalized career roadmap",
                 ].map((item) => (
                   <div
                     key={item}
-                    className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-slate-200"
+                    className="rounded-2xl border border-white/10 bg-slate-950/60 p-4 font-semibold text-slate-200"
                   >
                     ✅ {item}
                   </div>
@@ -263,16 +289,21 @@ export default function Home() {
               </div>
             </div>
 
-            <section className="rounded-3xl border border-white/10 bg-slate-900/80 p-6 shadow-2xl">
-              <h2 className="mb-4 text-2xl font-bold text-cyan-300">Login</h2>
+            <section className="rounded-[2rem] border border-white/10 bg-slate-900/90 p-6 shadow-2xl">
+              <h2 className="mb-2 text-2xl font-black text-cyan-300">
+                Get Started
+              </h2>
+              <p className="mb-5 text-sm text-slate-400">
+                Create an account or login to analyze your resume.
+              </p>
 
               <div className="space-y-4">
                 <input
                   type="email"
                   value={email}
-                  placeholder="Email"
+                  placeholder="Email address"
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl bg-slate-800 px-4 py-3 outline-none ring-1 ring-slate-700 focus:ring-cyan-400"
+                  className="w-full rounded-xl bg-slate-800 px-4 py-3 outline-none ring-1 ring-slate-700 focus:ring-2 focus:ring-cyan-400"
                 />
 
                 <input
@@ -280,19 +311,28 @@ export default function Home() {
                   value={password}
                   placeholder="Password"
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl bg-slate-800 px-4 py-3 outline-none ring-1 ring-slate-700 focus:ring-cyan-400"
+                  className="w-full rounded-xl bg-slate-800 px-4 py-3 outline-none ring-1 ring-slate-700 focus:ring-2 focus:ring-cyan-400"
                 />
 
                 <button
                   onClick={login}
-                  className="w-full rounded-xl bg-cyan-400 px-5 py-3 font-bold text-slate-950 hover:bg-cyan-300"
+                  className="w-full rounded-xl bg-cyan-400 px-5 py-3 font-black text-slate-950 hover:bg-cyan-300"
                 >
                   {loading === "login" ? "Logging in..." : "Login"}
                 </button>
 
+                <button
+                  onClick={register}
+                  className="w-full rounded-xl border border-cyan-400 px-5 py-3 font-black text-cyan-300 hover:bg-cyan-400 hover:text-slate-950"
+                >
+                  {loading === "register"
+                    ? "Creating account..."
+                    : "Create Account"}
+                </button>
+
                 {token && (
-                  <p className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-300">
-                    Logged in successfully. Upload your resume or load jobs.
+                  <p className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-300">
+                    ✅ Logged in successfully. Upload your resume to start.
                   </p>
                 )}
               </div>
@@ -309,23 +349,26 @@ export default function Home() {
           <StatCard title="Skill Gaps" value={missingSkills.length} subtitle="Skills to learn next" />
         </div>
 
-        <section className="mt-8 rounded-3xl border border-purple-500/20 bg-slate-900/80 p-6 shadow-xl">
-          <h2 className="text-2xl font-bold text-purple-300">Upload Resume</h2>
+        <section className="mt-8 rounded-[2rem] border border-purple-500/20 bg-slate-900/80 p-6 shadow-xl">
+          <h2 className="text-2xl font-black text-purple-300">
+            Upload Resume
+          </h2>
           <p className="mb-5 text-sm text-slate-400">
-            Upload a PDF resume to get score, skills, jobs, and AI advice.
+            Upload a PDF resume to generate your score, skills, roadmap, and job
+            matches.
           </p>
 
           <div
             {...getRootProps()}
-            className={`cursor-pointer rounded-3xl border-2 border-dashed p-10 text-center transition ${
+            className={`cursor-pointer rounded-[2rem] border-2 border-dashed p-10 text-center transition ${
               isDragActive
                 ? "border-purple-300 bg-purple-500/20"
                 : "border-purple-400/50 bg-slate-950/60 hover:border-purple-300"
             }`}
           >
             <input {...getInputProps()} />
-            <p className="text-xl font-bold text-purple-200">
-              📄 Drag & drop your resume PDF here
+            <p className="text-xl font-black text-purple-200">
+              📄 Drop your resume PDF here
             </p>
             <p className="mt-2 text-slate-400">or click to browse</p>
 
@@ -335,59 +378,37 @@ export default function Home() {
           </div>
 
           <div className="mt-5 flex flex-wrap gap-4">
-            <button
-              onClick={uploadResume}
-              className="rounded-xl bg-purple-500 px-5 py-3 font-semibold hover:bg-purple-400"
-            >
+            <ActionButton onClick={uploadResume} active={loading === "upload"}>
               {loading === "upload" ? "Analyzing..." : "Upload & Analyze"}
-            </button>
+            </ActionButton>
 
-            <button
-              onClick={() => loadDashboard()}
-              className="rounded-xl bg-blue-500 px-5 py-3 font-semibold hover:bg-blue-400"
-            >
+            <ActionButton onClick={() => loadDashboard()} active={loading === "dashboard"}>
               {loading === "dashboard" ? "Loading..." : "Load Dashboard"}
-            </button>
+            </ActionButton>
 
-            <button
-              onClick={() => loadJobs()}
-              className="rounded-xl bg-emerald-500 px-5 py-3 font-semibold hover:bg-emerald-400"
-            >
-              {loading === "jobs" ? "Loading..." : "Load Static Jobs"}
-            </button>
-
-            <button
-              onClick={() => fetchLiveJobs()}
-              className="rounded-xl bg-pink-500 px-5 py-3 font-semibold hover:bg-pink-400"
-            >
+            <ActionButton onClick={() => fetchLiveJobs()} active={loading === "fetchLiveJobs"}>
               {loading === "fetchLiveJobs" ? "Fetching..." : "Fetch Live Jobs"}
-            </button>
+            </ActionButton>
 
-            <button
-              onClick={() => loadLiveJobs()}
-              className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold hover:bg-cyan-400"
-            >
+            <ActionButton onClick={() => loadLiveJobs()} active={loading === "liveJobs"}>
               {loading === "liveJobs" ? "Loading..." : "Load Live Matches"}
-            </button>
+            </ActionButton>
 
-            <button
-              onClick={() => loadRoadmap()}
-              className="rounded-xl bg-orange-500 px-5 py-3 font-semibold hover:bg-orange-400"
-            >
+            <ActionButton onClick={() => loadRoadmap()} active={loading === "roadmap"}>
               {loading === "roadmap" ? "Loading..." : "Career Roadmap"}
-            </button>
+            </ActionButton>
           </div>
         </section>
 
         {(dashboard || uploadResult) && (
-          <section className="mt-8 rounded-3xl border border-cyan-500/20 bg-slate-900/80 p-6 shadow-xl">
-            <h2 className="mb-4 text-2xl font-bold text-cyan-300">
+          <section className="mt-8 rounded-[2rem] border border-cyan-500/20 bg-slate-900/80 p-6 shadow-xl">
+            <h2 className="mb-4 text-2xl font-black text-cyan-300">
               Resume Intelligence
             </h2>
 
             <div className="mb-3 flex items-center justify-between">
               <span className="text-slate-300">Resume Strength</span>
-              <span className="text-3xl font-bold text-cyan-300">{score}%</span>
+              <span className="text-3xl font-black text-cyan-300">{score}%</span>
             </div>
 
             <div className="h-5 overflow-hidden rounded-full bg-slate-800">
@@ -408,7 +429,7 @@ export default function Home() {
             </div>
 
             <div className="mt-6">
-              <h3 className="mb-3 font-semibold text-blue-300">
+              <h3 className="mb-3 font-bold text-blue-300">
                 Detected Skills
               </h3>
               <SkillCloud skills={skills} color="blue" />
@@ -417,8 +438,8 @@ export default function Home() {
         )}
 
         {missingSkills.length > 0 && (
-          <section className="mt-8 rounded-3xl border border-yellow-500/20 bg-slate-900/80 p-6 shadow-xl">
-            <h2 className="mb-3 text-2xl font-bold text-yellow-300">
+          <section className="mt-8 rounded-[2rem] border border-yellow-500/20 bg-slate-900/80 p-6 shadow-xl">
+            <h2 className="mb-3 text-2xl font-black text-yellow-300">
               Skill Gap Analysis
             </h2>
             <p className="mb-4 text-slate-400">
@@ -430,28 +451,28 @@ export default function Home() {
         )}
 
         {roadmap && (
-          <section className="mt-8 rounded-3xl border border-orange-500/20 bg-slate-900/80 p-6 shadow-xl">
-            <h2 className="mb-4 text-2xl font-bold text-orange-300">
+          <section className="mt-8 rounded-[2rem] border border-orange-500/20 bg-slate-900/80 p-6 shadow-xl">
+            <h2 className="mb-4 text-2xl font-black text-orange-300">
               🚀 AI Career Roadmap
             </h2>
 
             <div className="mb-6">
               <p className="text-sm text-slate-400">Target Role</p>
-              <p className="text-xl font-bold text-orange-200">
+              <p className="text-xl font-black text-orange-200">
                 {roadmap.target_role}
               </p>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <h3 className="mb-3 font-semibold text-green-300">
+                <h3 className="mb-3 font-bold text-green-300">
                   Current Skills
                 </h3>
                 <SkillCloud skills={roadmap.current_skills || []} color="blue" />
               </div>
 
               <div>
-                <h3 className="mb-3 font-semibold text-yellow-300">
+                <h3 className="mb-3 font-bold text-yellow-300">
                   Missing Skills
                 </h3>
                 <SkillCloud skills={roadmap.missing_skills || []} color="yellow" />
@@ -459,7 +480,7 @@ export default function Home() {
             </div>
 
             <div className="mt-6">
-              <h3 className="mb-3 font-semibold text-cyan-300">
+              <h3 className="mb-3 font-bold text-cyan-300">
                 90-Day Learning Plan
               </h3>
 
@@ -467,44 +488,20 @@ export default function Home() {
                 {roadmap.roadmap?.map((item: string, index: number) => (
                   <div
                     key={index}
-                    className="rounded-xl border border-white/10 bg-slate-950/60 p-3"
+                    className="rounded-xl border border-white/10 bg-slate-950/60 p-4 text-slate-300"
                   >
                     {item}
                   </div>
                 ))}
               </div>
             </div>
-
-            <div className="mt-6 grid gap-6 md:grid-cols-2">
-              <div>
-                <h3 className="mb-3 font-semibold text-purple-300">
-                  Project Ideas
-                </h3>
-                <ul className="space-y-2 text-slate-300">
-                  {roadmap.project_ideas?.map((item: string, index: number) => (
-                    <li key={index}>• {item}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="mb-3 font-semibold text-pink-300">
-                  Interview Topics
-                </h3>
-                <ul className="space-y-2 text-slate-300">
-                  {roadmap.interview_topics?.map((item: string, index: number) => (
-                    <li key={index}>• {item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
           </section>
         )}
 
         {liveJobs.length > 0 && (
-          <section className="mt-8 rounded-3xl border border-pink-500/20 bg-slate-900/80 p-6 shadow-xl">
-            <h2 className="mb-5 text-2xl font-bold text-pink-300">
-              Live Resume-Matched Jobs
+          <section className="mt-8 rounded-[2rem] border border-pink-500/20 bg-slate-900/80 p-6 shadow-xl">
+            <h2 className="mb-5 text-2xl font-black text-pink-300">
+              Live USA Resume-Matched Jobs
             </h2>
 
             <div className="grid gap-5 md:grid-cols-2">
@@ -516,8 +513,8 @@ export default function Home() {
         )}
 
         {jobs.length > 0 && (
-          <section className="mt-8 rounded-3xl border border-emerald-500/20 bg-slate-900/80 p-6 shadow-xl">
-            <h2 className="mb-5 text-2xl font-bold text-emerald-300">
+          <section className="mt-8 rounded-[2rem] border border-emerald-500/20 bg-slate-900/80 p-6 shadow-xl">
+            <h2 className="mb-5 text-2xl font-black text-emerald-300">
               Static Resume-Matched Jobs
             </h2>
 
@@ -543,6 +540,29 @@ export default function Home() {
   );
 }
 
+function ActionButton({
+  children,
+  onClick,
+  active,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  active?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-xl px-5 py-3 font-bold transition ${
+        active
+          ? "bg-white text-slate-950"
+          : "bg-white/10 text-white hover:bg-white/20"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function JobCard({ job, variant }: { job: any; variant: "live" | "static" }) {
   const badgeClass =
     variant === "live"
@@ -550,10 +570,10 @@ function JobCard({ job, variant }: { job: any; variant: "live" | "static" }) {
       : "bg-emerald-400/10 text-emerald-300";
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-5 transition hover:-translate-y-1 hover:border-cyan-400/40">
+    <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-5 transition hover:-translate-y-1 hover:border-cyan-400/40 hover:shadow-xl">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-xl font-bold">{job.title}</h3>
+          <h3 className="text-xl font-black">{job.title}</h3>
           <p className="text-slate-400">{job.company}</p>
 
           {job.location && (
@@ -565,33 +585,14 @@ function JobCard({ job, variant }: { job: any; variant: "live" | "static" }) {
           )}
 
           <div className="mt-3 flex flex-wrap gap-2">
-            {job.usa_only && (
-              <span className="rounded-full bg-blue-500/15 px-3 py-1 text-xs text-blue-200">
-                🇺🇸 USA
-              </span>
-            )}
-
-            {job.visa_sponsorship && (
-              <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-200">
-                💼 Sponsorship
-              </span>
-            )}
-
-            {job.opt_friendly && (
-              <span className="rounded-full bg-purple-500/15 px-3 py-1 text-xs text-purple-200">
-                🎓 OPT
-              </span>
-            )}
-
-            {job.stem_opt_friendly && (
-              <span className="rounded-full bg-pink-500/15 px-3 py-1 text-xs text-pink-200">
-                🚀 STEM OPT
-              </span>
-            )}
+            {job.usa_only && <Badge>🇺🇸 USA</Badge>}
+            {job.visa_sponsorship && <Badge>💼 Sponsorship</Badge>}
+            {job.opt_friendly && <Badge>🎓 OPT</Badge>}
+            {job.stem_opt_friendly && <Badge>🚀 STEM OPT</Badge>}
           </div>
         </div>
 
-        <span className={`rounded-full px-3 py-1 text-sm font-bold ${badgeClass}`}>
+        <span className={`rounded-full px-3 py-1 text-sm font-black ${badgeClass}`}>
           {job.match_score}%
         </span>
       </div>
@@ -604,21 +605,12 @@ function JobCard({ job, variant }: { job: any; variant: "live" | "static" }) {
         <strong>Missing:</strong> {job.missing_skills?.join(", ") || "None"}
       </p>
 
-      {job.learning_recommendations?.length > 0 && (
-        <div className="mb-4">
-          <p className="mb-2 font-semibold text-yellow-300">
-            Learning Recommendations
-          </p>
-          <SkillCloud skills={job.learning_recommendations || []} color="yellow" />
-        </div>
-      )}
-
       {job.apply_url && (
         <a
           href={job.apply_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex rounded-xl bg-cyan-400 px-4 py-2 font-semibold text-slate-950 hover:bg-cyan-300"
+          className="inline-flex rounded-xl bg-cyan-400 px-4 py-2 font-bold text-slate-950 hover:bg-cyan-300"
         >
           Apply Now →
         </a>
@@ -627,177 +619,10 @@ function JobCard({ job, variant }: { job: any; variant: "live" | "static" }) {
   );
 }
 
-function ChatWidget({
-  chatOpen,
-  setChatOpen,
-  chatHistory,
-  chatMessage,
-  setChatMessage,
-  sendMessage,
-  loading,
-}: any) {
+function Badge({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <button
-        onClick={() => setChatOpen(!chatOpen)}
-        className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-pink-500 text-3xl shadow-2xl hover:bg-pink-400"
-      >
-        🤖
-      </button>
-
-      {chatOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-[400px] max-w-[92vw] rounded-3xl border border-pink-500/30 bg-slate-950 shadow-2xl">
-          <div className="flex items-center justify-between border-b border-slate-800 p-4">
-            <div>
-              <h2 className="text-lg font-bold text-pink-300">
-                AI Career Coach
-              </h2>
-              <p className="text-xs text-slate-400">
-                Ask about resumes, jobs, or interviews
-              </p>
-            </div>
-
-            <button
-              onClick={() => setChatOpen(false)}
-              className="text-slate-400 hover:text-white"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="h-80 overflow-y-auto p-4">
-            {chatHistory.length === 0 ? (
-              <div className="space-y-3 text-sm text-slate-400">
-                <p>Try asking:</p>
-
-                <button
-                  onClick={() =>
-                    setChatMessage(
-                      "What should I learn next based on my resume?"
-                    )
-                  }
-                  className="block rounded-xl bg-slate-800 px-3 py-2 text-left hover:bg-slate-700"
-                >
-                  What should I learn next?
-                </button>
-
-                <button
-                  onClick={() => setChatMessage("How can I improve my resume?")}
-                  className="block rounded-xl bg-slate-800 px-3 py-2 text-left hover:bg-slate-700"
-                >
-                  How can I improve my resume?
-                </button>
-              </div>
-            ) : (
-              chatHistory.map((msg: any, index: number) => (
-                <div
-                  key={index}
-                  className={`mb-3 ${
-                    msg.role === "user" ? "text-right" : "text-left"
-                  }`}
-                >
-                  <div
-                    className={`inline-block max-w-[80%] rounded-2xl px-4 py-2 ${
-                      msg.role === "user"
-                        ? "bg-cyan-400 text-slate-950"
-                        : "bg-slate-800 text-white"
-                    }`}
-                  >
-                    {msg.message}
-                  </div>
-                </div>
-              ))
-            )}
-
-            {loading === "chat" && (
-              <p className="text-sm text-pink-300">Coach is typing...</p>
-            )}
-          </div>
-
-          <div className="flex gap-2 border-t border-slate-800 p-4">
-            <input
-              type="text"
-              value={chatMessage}
-              onChange={(e) => setChatMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") sendMessage();
-              }}
-              placeholder="Ask your AI Career Coach..."
-              className="flex-1 rounded-xl bg-slate-800 px-4 py-3 text-white outline-none"
-            />
-
-            <button
-              onClick={sendMessage}
-              className="rounded-xl bg-pink-500 px-4 py-3 font-semibold hover:bg-pink-400"
-            >
-              Send
-            </button>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-function StatCard({
-  title,
-  value,
-  subtitle,
-}: {
-  title: string;
-  value: string | number;
-  subtitle: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl backdrop-blur">
-      <p className="text-sm text-slate-400">{title}</p>
-      <p className="mt-2 text-3xl font-extrabold">{value}</p>
-      <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
-    </div>
-  );
-}
-
-function InfoBlock({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-      <p className="text-sm text-slate-400">{title}</p>
-      <p className="mt-2 break-words font-semibold">{children}</p>
-    </div>
-  );
-}
-
-function SkillCloud({
-  skills,
-  color,
-}: {
-  skills: string[];
-  color: "blue" | "yellow";
-}) {
-  const classes =
-    color === "blue"
-      ? "bg-blue-500/15 text-blue-200"
-      : "bg-yellow-500/15 text-yellow-200";
-
-  if (!skills || skills.length === 0) {
-    return <p className="text-sm text-slate-500">No skills found yet.</p>;
-  }
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      {skills.map((skill) => (
-        <span
-          key={skill}
-          className={`rounded-full px-3 py-1 text-sm ${classes}`}
-        >
-          {skill}
-        </span>
-      ))}
-    </div>
+    <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-200">
+      {children}
+    </span>
   );
 }
