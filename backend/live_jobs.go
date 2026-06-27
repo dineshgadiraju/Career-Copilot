@@ -559,20 +559,24 @@ func FetchRoleBasedLiveJobs(c *gin.Context) {
 func roleToJobSearch(role string) string {
 	role = strings.ToLower(role)
 
-	if strings.Contains(role, "go") || strings.Contains(role, "backend") {
-		return "backend engineer"
-	}
-
-	if strings.Contains(role, "ml") || strings.Contains(role, "ai") {
-		return "machine learning engineer"
+	if strings.Contains(role, "backend") {
+		return "backend software engineer"
 	}
 
 	if strings.Contains(role, "full stack") {
 		return "full stack engineer"
 	}
 
+	if strings.Contains(role, "ai") || strings.Contains(role, "ml") {
+		return "machine learning engineer"
+	}
+
 	if strings.Contains(role, "frontend") {
 		return "frontend engineer"
+	}
+
+	if strings.Contains(role, "data engineer") {
+		return "data engineer"
 	}
 
 	return "software engineer"
