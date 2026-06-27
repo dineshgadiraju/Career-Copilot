@@ -48,6 +48,7 @@ func main() {
 	router.GET("/jobs/live-recommended", AuthMiddleware(), GetLiveRecommendedJobs)
 
 	router.GET("/roadmap", AuthMiddleware(), GetCareerRoadmap)
+	router.GET("/role-recommendation", AuthMiddleware(), GetRecommendedRole)
 	router.POST("/chat", AuthMiddleware(), CareerChat)
 
 	router.POST("/saved-jobs", AuthMiddleware(), SaveJob)

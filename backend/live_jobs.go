@@ -160,28 +160,25 @@ func GetLiveRecommendedJobs(c *gin.Context) {
 	rows, err := DB.Query(
 		context.Background(),
 		`
-		SELECT
-			id,
-			title,
-			company,
-			location,
-			category,
-			job_type,
-			source,
-			apply_url,
-			required_skills,
-			visa_sponsorship,
-			opt_friendly,
-			stem_opt_friendly,
-			usa_only
-		FROM live_jobs
-		WHERE usa_only = TRUE
-		   OR visa_sponsorship = TRUE
-		   OR opt_friendly = TRUE
-		   OR stem_opt_friendly = TRUE
-		ORDER BY created_at DESC
-		LIMIT 100
-		`,
+	SELECT
+		id,
+		title,
+		company,
+		location,
+		category,
+		job_type,
+		source,
+		apply_url,
+		required_skills,
+		visa_sponsorship,
+		opt_friendly,
+		stem_opt_friendly,
+		usa_only
+	FROM live_jobs
+	WHERE usa_only = TRUE
+	ORDER BY created_at DESC
+	LIMIT 100
+	`,
 	)
 
 	if err != nil {
