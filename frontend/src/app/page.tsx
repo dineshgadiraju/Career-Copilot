@@ -29,6 +29,7 @@ export default function Home() {
   const [jobs, setJobs] = useState<any[]>([]);
   const [liveJobs, setLiveJobs] = useState<any[]>([]);
   const [roadmap, setRoadmap] = useState<any>(null);
+  const [roleRecommendation, setRoleRecommendation] = useState<any>(null);
   const [file, setFile] = useState<File | null>(null);
   const [uploadResult, setUploadResult] = useState<any>(null);
   const [loading, setLoading] = useState("");
@@ -222,6 +223,30 @@ export default function Home() {
     }
   }
 
+  async function loadRoleRecommendation(currentToken = token) {
+    if (!currentToken) return alert("Please login first");
+
+    setLoading("roleRecommendation");
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/role-recommendation`, {
+        headers: { Authorization: `Bearer ${currentToken}` },
+      });
+
+      const data = await parseApiResponse(res);
+      setLoading("");
+
+      if (!res.ok) {
+        return alert(data.error || "Failed to load role recommendation");
+      }
+
+      setRoleRecommendation(data);
+    } catch (err: any) {
+      setLoading("");
+      alert(err.message || "Failed to load role recommendation");
+    }
+  }
+
   async function uploadResume() {
     if (!token) return alert("Please login first");
     if (!file) return alert("Please select a resume PDF first");
@@ -250,6 +275,7 @@ export default function Home() {
       await loadJobs(token);
       await loadLiveJobs(token);
       await loadRoadmap(token);
+      await loadRoleRecommendation(token);
       setLoading("");
     } catch (err: any) {
       setLoading("");
@@ -483,6 +509,10 @@ export default function Home() {
             <ActionButton onClick={() => loadRoadmap()} active={loading === "roadmap"} tone="orange">
               {loading === "roadmap" ? "Loading..." : "Career Roadmap"}
             </ActionButton>
+
+            <ActionButton onClick={() => loadRoleRecommendation()} active={loading === "roleRecommendation"} tone="sky">
+              {loading === "roleRecommendation" ? "Loading..." : "Recommended Role"}
+            </ActionButton>
           </div>
         </section>
 
@@ -519,6 +549,51 @@ export default function Home() {
                 Detected Skills
               </h3>
               <SkillCloud skills={skills} color="blue" />
+            </div>
+          </section>
+        )}
+
+        {roleRecommendation && (
+          <section className="mt-8 rounded-[2rem] border border-sky-100 bg-white p-6 shadow-xl shadow-sky-100/70">
+            <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="mb-3 inline-flex rounded-full border border-sky-100 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-700">
+                  🎯 Resume-Based Role Match
+                </p>
+                <h2 className="text-3xl font-black text-slate-950">
+                  {roleRecommendation.recommended_role}
+                </h2>
+                <p className="mt-3 max-w-3xl text-slate-600">
+                  {roleRecommendation.reason}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-4 text-center">
+                <p className="text-sm font-bold text-sky-600">Best Fit</p>
+                <p className="text-2xl font-black text-sky-700">High</p>
+              </div>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                <h3 className="mb-3 font-black text-emerald-700">
+                  Current Strengths
+                </h3>
+                <SkillCloud
+                  skills={roleRecommendation.current_skills || []}
+                  color="blue"
+                />
+              </div>
+
+              <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4">
+                <h3 className="mb-3 font-black text-orange-700">
+                  Learn Next
+                </h3>
+                <SkillCloud
+                  skills={roleRecommendation.next_skills || []}
+                  color="yellow"
+                />
+              </div>
             </div>
           </section>
         )}
