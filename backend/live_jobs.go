@@ -45,38 +45,37 @@ type LiveJobRecommendation struct {
 }
 
 func FetchLiveJobs(c *gin.Context) {
-	resp, err := http.Get("https://remotive.com/api/remote-jobs?limit=50")
-
+	resp, err := http.Get("https://remotive.com/api/remote-jobs?limit=100")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to fetch live jobs",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch live jobs"})
 		return
 	}
-
 	defer resp.Body.Close()
 
 	var remotiveData RemotiveResponse
-
 	if err := json.NewDecoder(resp.Body).Decode(&remotiveData); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to decode live jobs",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode live jobs"})
 		return
 	}
 
-	insertedOrSkipped := 0
+	inserted := 0
+	skippedNonUSA := 0
 
 	for _, job := range remotiveData.Jobs {
 		text := job.Title + " " + job.Description + " " + job.CandidateRequiredLocation
 
-		requiredSkills := extractSkillsFromText(text)
 		usaOnly := detectUSAJob(job.CandidateRequiredLocation, text)
+		if !usaOnly {
+			skippedNonUSA++
+			continue
+		}
+
+		requiredSkills := extractSkillsFromText(text)
 		visaSponsorship := detectVisaSponsorship(text)
 		optFriendly := detectOPTFriendly(text)
 		stemOptFriendly := detectSTEMOPTFriendly(text)
 
-		_, _ = DB.Exec(
+		_, err := DB.Exec(
 			context.Background(),
 			`
 			INSERT INTO live_jobs(
@@ -124,12 +123,15 @@ func FetchLiveJobs(c *gin.Context) {
 			usaOnly,
 		)
 
-		insertedOrSkipped++
+		if err == nil {
+			inserted++
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Live jobs fetched successfully",
-		"count":   insertedOrSkipped,
+		"message":         "USA live jobs fetched successfully",
+		"inserted":        inserted,
+		"skipped_non_usa": skippedNonUSA,
 	})
 }
 
@@ -151,34 +153,32 @@ func GetLiveRecommendedJobs(c *gin.Context) {
 	).Scan(&resumeSkills)
 
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "No resume found",
-		})
+		c.JSON(http.StatusNotFound, gin.H{"error": "No resume found"})
 		return
 	}
 
 	rows, err := DB.Query(
 		context.Background(),
 		`
-	SELECT
-		id,
-		title,
-		company,
-		location,
-		category,
-		job_type,
-		source,
-		apply_url,
-		required_skills,
-		visa_sponsorship,
-		opt_friendly,
-		stem_opt_friendly,
-		usa_only
-	FROM live_jobs
-	WHERE usa_only = TRUE
-	ORDER BY created_at DESC
-	LIMIT 100
-	`,
+		SELECT
+			id,
+			title,
+			company,
+			location,
+			category,
+			job_type,
+			source,
+			apply_url,
+			required_skills,
+			visa_sponsorship,
+			opt_friendly,
+			stem_opt_friendly,
+			usa_only
+		FROM live_jobs
+		WHERE usa_only = TRUE
+		ORDER BY created_at DESC
+		LIMIT 100
+		`,
 	)
 
 	if err != nil {
@@ -187,7 +187,6 @@ func GetLiveRecommendedJobs(c *gin.Context) {
 		})
 		return
 	}
-
 	defer rows.Close()
 
 	recommendations := []LiveJobRecommendation{}
@@ -216,6 +215,10 @@ func GetLiveRecommendedJobs(c *gin.Context) {
 			continue
 		}
 
+		if !job.USAOnly {
+			continue
+		}
+
 		for _, skill := range requiredSkills {
 			if containsSkill(resumeSkills, skill) {
 				job.MatchedSkills = append(job.MatchedSkills, skill)
@@ -235,62 +238,36 @@ func GetLiveRecommendedJobs(c *gin.Context) {
 		if recommendations[i].VisaSponsorship != recommendations[j].VisaSponsorship {
 			return recommendations[i].VisaSponsorship
 		}
-
 		if recommendations[i].STEMOPTFriendly != recommendations[j].STEMOPTFriendly {
 			return recommendations[i].STEMOPTFriendly
 		}
-
 		if recommendations[i].OPTFriendly != recommendations[j].OPTFriendly {
 			return recommendations[i].OPTFriendly
 		}
-
 		return recommendations[i].MatchScore > recommendations[j].MatchScore
 	})
 
-	c.JSON(http.StatusOK, gin.H{
-		"jobs": recommendations,
-	})
+	c.JSON(http.StatusOK, gin.H{"jobs": recommendations})
 }
 
 func extractSkillsFromText(text string) []string {
 	text = strings.ToLower(text)
 
 	knownSkills := []string{
-		"go",
-		"golang",
-		"python",
-		"java",
-		"javascript",
-		"typescript",
-		"react",
-		"next.js",
-		"node",
-		"node.js",
-		"sql",
-		"postgresql",
-		"mysql",
-		"mongodb",
-		"docker",
-		"kubernetes",
-		"aws",
-		"azure",
-		"gcp",
-		"linux",
-		"api",
-		"rest",
-		"graphql",
-		"machine learning",
-		"fastapi",
-		"redis",
-		"ci/cd",
-		"github",
+		"go", "golang", "python", "java", "javascript", "typescript",
+		"react", "next.js", "node", "node.js", "sql", "postgresql",
+		"mysql", "mongodb", "docker", "kubernetes", "aws", "azure",
+		"gcp", "linux", "api", "rest", "graphql", "machine learning",
+		"fastapi", "redis", "ci/cd", "github",
 	}
 
 	skills := []string{}
+	seen := map[string]bool{}
 
 	for _, skill := range knownSkills {
-		if strings.Contains(text, skill) {
+		if strings.Contains(text, skill) && !seen[skill] {
 			skills = append(skills, skill)
+			seen[skill] = true
 		}
 	}
 
@@ -298,24 +275,83 @@ func extractSkillsFromText(text string) []string {
 }
 
 func detectUSAJob(location string, text string) bool {
-	location = strings.ToLower(location)
+	location = strings.ToLower(strings.TrimSpace(location))
 	text = strings.ToLower(text)
+	combined := location + " " + text
 
-	usaKeywords := []string{
-		"usa",
-		"united states",
-		"us only",
-		"u.s.",
-		"u.s.a",
-		"america",
-		"north america",
-		"remote us",
-		"remote - us",
-		"remote (us)",
+	nonUSKeywords := []string{
+		"worldwide",
+		"anywhere",
+		"global",
+		"international",
+		"europe",
+		"emea",
+		"apac",
+		"asia",
+		"latin america",
+		"latam",
+		"brazil",
+		"india",
+		"canada",
+		"mexico",
+		"united kingdom",
+		"uk",
+		"germany",
+		"france",
+		"spain",
+		"australia",
+		"netherlands",
+		"poland",
+		"philippines",
+		"argentina",
+		"colombia",
+		"portugal",
+		"ireland",
 	}
 
-	for _, keyword := range usaKeywords {
-		if strings.Contains(location, keyword) || strings.Contains(text, keyword) {
+	for _, keyword := range nonUSKeywords {
+		if strings.Contains(combined, keyword) {
+			return false
+		}
+	}
+
+	usKeywords := []string{
+		"usa",
+		"united states",
+		"u.s.",
+		"u.s.a",
+		"us only",
+		"remote us",
+		"remote - us",
+		"remote, us",
+		"remote (us)",
+		"remote within the us",
+		"must be based in the us",
+		"must be based in the united states",
+		"authorized to work in the united states",
+		"new york",
+		"california",
+		"texas",
+		"washington",
+		"florida",
+		"illinois",
+		"georgia",
+		"colorado",
+		"massachusetts",
+		"seattle",
+		"san francisco",
+		"los angeles",
+		"austin",
+		"dallas",
+		"chicago",
+		"boston",
+		"atlanta",
+		"denver",
+		"miami",
+	}
+
+	for _, keyword := range usKeywords {
+		if strings.Contains(combined, keyword) {
 			return true
 		}
 	}
@@ -325,6 +361,22 @@ func detectUSAJob(location string, text string) bool {
 
 func detectVisaSponsorship(text string) bool {
 	text = strings.ToLower(text)
+
+	negativeKeywords := []string{
+		"no visa sponsorship",
+		"not sponsor",
+		"does not sponsor",
+		"do not sponsor",
+		"cannot sponsor",
+		"unable to sponsor",
+		"without sponsorship",
+	}
+
+	for _, keyword := range negativeKeywords {
+		if strings.Contains(text, keyword) {
+			return false
+		}
+	}
 
 	positiveKeywords := []string{
 		"visa sponsorship",
@@ -336,24 +388,6 @@ func detectVisaSponsorship(text string) bool {
 		"employment sponsorship",
 		"work authorization sponsorship",
 		"sponsor work visa",
-	}
-
-	negativeKeywords := []string{
-		"no visa sponsorship",
-		"not sponsor",
-		"does not sponsor",
-		"do not sponsor",
-		"cannot sponsor",
-		"unable to sponsor",
-		"without sponsorship",
-		"must be authorized to work in the united states",
-		"must be legally authorized to work",
-	}
-
-	for _, keyword := range negativeKeywords {
-		if strings.Contains(text, keyword) {
-			return false
-		}
 	}
 
 	for _, keyword := range positiveKeywords {
