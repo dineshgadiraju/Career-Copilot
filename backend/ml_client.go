@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -19,36 +20,28 @@ type ResumeAnalysis struct {
 
 func AnalyzeResume(path string) (*ResumeAnalysis, error) {
 	file, err := os.Open(path)
-
 	if err != nil {
 		return nil, err
 	}
-
 	defer file.Close()
 
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 
 	part, err := writer.CreateFormFile("resume", file.Name())
-
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = io.Copy(part, file)
-
-	if err != nil {
+	if _, err = io.Copy(part, file); err != nil {
 		return nil, err
 	}
 
-	err = writer.Close()
-
-	if err != nil {
+	if err = writer.Close(); err != nil {
 		return nil, err
 	}
 
 	mlServiceURL := os.Getenv("ML_SERVICE_URL")
-
 	if mlServiceURL == "" {
 		mlServiceURL = "http://localhost:8000"
 	}
@@ -60,32 +53,33 @@ func AnalyzeResume(path string) (*ResumeAnalysis, error) {
 		mlServiceURL+"/analyze-resume",
 		&body,
 	)
-
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set(
-		"Content-Type",
-		writer.FormDataContentType(),
-	)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	client := &http.Client{}
 
 	resp, err := client.Do(req)
-
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ML service request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	rawBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read ML response: %w", err)
 	}
 
-	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("ML service returned status %d: %s", resp.StatusCode, string(rawBody[:min(len(rawBody), 300)]))
+	}
 
 	var result ResumeAnalysis
 
-	err = json.NewDecoder(resp.Body).Decode(&result)
-
-	if err != nil {
-		return nil, err
+	if err := json.Unmarshal(rawBody, &result); err != nil {
+		return nil, fmt.Errorf("ML service returned non-JSON response: %s", string(rawBody[:min(len(rawBody), 300)]))
 	}
 
 	return &result, nil
