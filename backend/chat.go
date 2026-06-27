@@ -18,12 +18,19 @@ type ChatRequest struct {
 }
 
 type ChatJobMatch struct {
-	Title          string
-	Company        string
-	RequiredSkills []string
-	MatchedSkills  []string
-	MissingSkills  []string
-	MatchScore     int
+	Title              string
+	Company            string
+	Location           string
+	ApplyURL           string
+	RequiredSkills     []string
+	MatchedSkills      []string
+	MissingSkills      []string
+	MatchScore         int
+	VisaSponsorship    bool
+	OPTFriendly        bool
+	STEMOPTFriendly    bool
+	USAOnly            bool
+	IsLive             bool
 }
 
 type OpenAIRequest struct {
@@ -51,13 +58,33 @@ func CareerChat(c *gin.Context) {
 	}
 
 	skills, score := getLatestResumeData(userID)
-	jobMatches := getChatJobMatches(skills)
-	missingSkills := collectMissingSkills(jobMatches)
+	staticMatches := getChatJobMatches(skills)
+	liveMatches := getChatLiveJobMatches(skills)
+	allMatches := append(staticMatches, liveMatches...)
+	sortChatMatches(allMatches)
 
-	reply, err := callOpenAICareerCoach(req.Message, skills, score, jobMatches, missingSkills)
+	missingSkills := collectMissingSkills(allMatches)
+	targetRole := detectTargetRole(skills)
+	roadmapMissing := getRoadmapMissingSkills(skills, targetRole)
+
+	reply, err := callOpenAICareerCoach(
+		req.Message,
+		skills,
+		score,
+		allMatches,
+		missingSkills,
+		targetRole,
+		roadmapMissing,
+	)
 
 	if err != nil {
-		reply = buildCareerReply(strings.ToLower(req.Message), skills, score, jobMatches, missingSkills)
+		reply = buildCareerReply(
+			strings.ToLower(req.Message),
+			skills,
+			score,
+			allMatches,
+			missingSkills,
+		)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -71,6 +98,8 @@ func callOpenAICareerCoach(
 	score int,
 	jobMatches []ChatJobMatch,
 	missingSkills []string,
+	targetRole string,
+	roadmapMissing []string,
 ) (string, error) {
 	apiKey := os.Getenv("OPENAI_API_KEY")
 
@@ -78,13 +107,20 @@ func callOpenAICareerCoach(
 		return "", os.ErrNotExist
 	}
 
-	contextText := buildAIContext(skills, score, jobMatches, missingSkills)
+	contextText := buildAIContext(
+		skills,
+		score,
+		jobMatches,
+		missingSkills,
+		targetRole,
+		roadmapMissing,
+	)
 
 	requestBody := OpenAIRequest{
-		Model:           "gpt-4.1-mini",
-		Instructions:    "You are an AI Career Coach. Give practical, concise, personalized advice. Use the user's resume skills, score, missing skills, and job matches. Keep answers friendly and action-oriented.",
-		Input:           contextText + "\n\nUser question: " + userMessage,
-		MaxOutputTokens: 300,
+		Model: "gpt-4.1-mini",
+		Instructions: "You are an AI Career Coach for software job seekers, especially international students in the US. Give practical, concise, personalized advice using the user's resume skills, score, skill gaps, roadmap, static job matches, live job matches, and F1/OPT/STEM OPT/sponsorship signals. Be honest if sponsorship data is uncertain. Keep answers action-oriented.",
+		Input: contextText + "\n\nUser question: " + userMessage,
+		MaxOutputTokens: 500,
 	}
 
 	jsonBody, err := json.Marshal(requestBody)
@@ -134,19 +170,49 @@ func buildAIContext(
 	score int,
 	jobMatches []ChatJobMatch,
 	missingSkills []string,
+	targetRole string,
+	roadmapMissing []string,
 ) string {
-	bestJob := "No job matches found yet."
+	bestJobs := []string{}
 
-	if len(jobMatches) > 0 {
-		best := jobMatches[0]
-		bestJob = best.Title + " at " + best.Company +
-			" with match score " + strconv.Itoa(best.MatchScore) + "%"
+	for i, job := range jobMatches {
+		if i >= 5 {
+			break
+		}
+
+		jobType := "Static"
+		if job.IsLive {
+			jobType = "Live"
+		}
+
+		visaInfo := ""
+		if job.USAOnly || job.VisaSponsorship || job.OPTFriendly || job.STEMOPTFriendly {
+			visaInfo = " | USA: " + strconv.FormatBool(job.USAOnly) +
+				" | Visa sponsorship: " + strconv.FormatBool(job.VisaSponsorship) +
+				" | OPT: " + strconv.FormatBool(job.OPTFriendly) +
+				" | STEM OPT: " + strconv.FormatBool(job.STEMOPTFriendly)
+		}
+
+		bestJobs = append(
+			bestJobs,
+			jobType+": "+job.Title+" at "+job.Company+
+				" | Match: "+strconv.Itoa(job.MatchScore)+"%"+
+				" | Matched: "+strings.Join(job.MatchedSkills, ", ")+
+				" | Missing: "+strings.Join(job.MissingSkills, ", ")+
+				visaInfo,
+		)
+	}
+
+	if len(bestJobs) == 0 {
+		bestJobs = append(bestJobs, "No job matches found yet.")
 	}
 
 	return "Resume score: " + strconv.Itoa(score) + "%\n" +
 		"Detected skills: " + strings.Join(skills, ", ") + "\n" +
-		"Missing skills: " + strings.Join(missingSkills, ", ") + "\n" +
-		"Best job match: " + bestJob
+		"Target role: " + targetRole + "\n" +
+		"Roadmap missing skills: " + strings.Join(roadmapMissing, ", ") + "\n" +
+		"Job-based missing skills: " + strings.Join(missingSkills, ", ") + "\n" +
+		"Top job matches:\n" + strings.Join(bestJobs, "\n")
 }
 
 func getLatestResumeData(userID int) ([]string, int) {
@@ -214,14 +280,103 @@ func getChatJobMatches(resumeSkills []string) []ChatJobMatch {
 			job.MatchScore = (len(job.MatchedSkills) * 100) / len(job.RequiredSkills)
 		}
 
+		job.IsLive = false
 		matches = append(matches, job)
 	}
 
-	sort.Slice(matches, func(i, j int) bool {
-		return matches[i].MatchScore > matches[j].MatchScore
-	})
+	sortChatMatches(matches)
 
 	return matches
+}
+
+func getChatLiveJobMatches(resumeSkills []string) []ChatJobMatch {
+	rows, err := DB.Query(
+		context.Background(),
+		`
+		SELECT
+			title,
+			company,
+			location,
+			apply_url,
+			required_skills,
+			visa_sponsorship,
+			opt_friendly,
+			stem_opt_friendly,
+			usa_only
+		FROM live_jobs
+		ORDER BY created_at DESC
+		LIMIT 50
+		`,
+	)
+
+	if err != nil {
+		return []ChatJobMatch{}
+	}
+
+	defer rows.Close()
+
+	matches := []ChatJobMatch{}
+
+	for rows.Next() {
+		var job ChatJobMatch
+
+		err := rows.Scan(
+			&job.Title,
+			&job.Company,
+			&job.Location,
+			&job.ApplyURL,
+			&job.RequiredSkills,
+			&job.VisaSponsorship,
+			&job.OPTFriendly,
+			&job.STEMOPTFriendly,
+			&job.USAOnly,
+		)
+
+		if err != nil {
+			continue
+		}
+
+		for _, requiredSkill := range job.RequiredSkills {
+			if containsChatSkill(resumeSkills, requiredSkill) {
+				job.MatchedSkills = append(job.MatchedSkills, requiredSkill)
+			} else {
+				job.MissingSkills = append(job.MissingSkills, requiredSkill)
+			}
+		}
+
+		if len(job.RequiredSkills) > 0 {
+			job.MatchScore = (len(job.MatchedSkills) * 100) / len(job.RequiredSkills)
+		}
+
+		job.IsLive = true
+		matches = append(matches, job)
+	}
+
+	sortChatMatches(matches)
+
+	return matches
+}
+
+func sortChatMatches(matches []ChatJobMatch) {
+	sort.Slice(matches, func(i, j int) bool {
+		if matches[i].VisaSponsorship != matches[j].VisaSponsorship {
+			return matches[i].VisaSponsorship
+		}
+
+		if matches[i].STEMOPTFriendly != matches[j].STEMOPTFriendly {
+			return matches[i].STEMOPTFriendly
+		}
+
+		if matches[i].OPTFriendly != matches[j].OPTFriendly {
+			return matches[i].OPTFriendly
+		}
+
+		if matches[i].USAOnly != matches[j].USAOnly {
+			return matches[i].USAOnly
+		}
+
+		return matches[i].MatchScore > matches[j].MatchScore
+	})
 }
 
 func collectMissingSkills(jobMatches []ChatJobMatch) []string {
@@ -256,16 +411,16 @@ func buildCareerReply(
 	if strings.Contains(message, "resume") || strings.Contains(message, "improve") {
 		return "Your current resume score is " + strconv.Itoa(score) + "%. I detected these skills: " +
 			strings.Join(skills, ", ") +
-			". To improve your resume, add measurable project impact, backend architecture details, API endpoints, database work, Docker usage, and deployment details."
+			". To improve your resume, add measurable project impact, backend architecture details, API endpoints, database work, Docker usage, deployment details, and role-specific keywords from your matched jobs."
 	}
 
 	if strings.Contains(message, "learn") ||
 		strings.Contains(message, "skills") ||
 		strings.Contains(message, "next") {
 		if len(missingSkills) > 0 {
-			return "Based on your resume and recommended jobs, you should learn: " +
+			return "Based on your resume and job matches, you should learn: " +
 				strings.Join(missingSkills, ", ") +
-				". Start with Docker and PostgreSQL, then move to AWS and Kubernetes."
+				". Prioritize skills that appear repeatedly in live job postings and your career roadmap."
 		}
 
 		return "Your current skills are strong. Next, focus on system design, testing, deployment, cloud platforms, and production-level backend architecture."
@@ -273,28 +428,40 @@ func buildCareerReply(
 
 	if strings.Contains(message, "job") ||
 		strings.Contains(message, "role") ||
-		strings.Contains(message, "career") {
+		strings.Contains(message, "career") ||
+		strings.Contains(message, "opt") ||
+		strings.Contains(message, "visa") ||
+		strings.Contains(message, "sponsor") {
 		if len(jobMatches) > 0 {
 			best := jobMatches[0]
+
+			visaText := ""
+			if best.IsLive {
+				visaText = " USA: " + strconv.FormatBool(best.USAOnly) +
+					", visa sponsorship: " + strconv.FormatBool(best.VisaSponsorship) +
+					", OPT: " + strconv.FormatBool(best.OPTFriendly) +
+					", STEM OPT: " + strconv.FormatBool(best.STEMOPTFriendly) + "."
+			}
 
 			return "Your best current job match is " + best.Title +
 				" at " + best.Company +
 				" with a match score of " + strconv.Itoa(best.MatchScore) +
 				"%. Matched skills: " + strings.Join(best.MatchedSkills, ", ") +
-				". Missing skills: " + strings.Join(best.MissingSkills, ", ") + "."
+				". Missing skills: " + strings.Join(best.MissingSkills, ", ") +
+				"." + visaText
 		}
 
-		return "Target backend developer, Go developer, full-stack developer, and Python ML engineer roles."
+		return "Target backend developer, Go developer, full-stack developer, and Python ML engineer roles. For F1/OPT, focus on US roles that explicitly mention sponsorship, OPT, STEM OPT, E-Verify, or international student eligibility."
 	}
 
 	if strings.Contains(message, "interview") {
-		return "For backend interviews, practice Go fundamentals, REST APIs, SQL queries, JWT authentication, PostgreSQL, Docker, concurrency, error handling, and system design."
+		return "For backend interviews, practice Go fundamentals, REST APIs, SQL queries, JWT authentication, PostgreSQL, Docker, concurrency, error handling, system design, and explaining this AI Career Copilot project end-to-end."
 	}
 
 	return "Based on your resume, your detected skills are: " +
 		strings.Join(skills, ", ") +
 		". Your score is " + strconv.Itoa(score) +
-		"%. Ask me what to learn next, how to improve your resume, or what jobs fit you best."
+		"%. Ask me what to learn next, how to improve your resume, what jobs fit you best, or how to target F1/OPT-friendly roles."
 }
 
 func containsChatSkill(skills []string, target string) bool {

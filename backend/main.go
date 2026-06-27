@@ -60,7 +60,9 @@ func main() {
 	router.POST("/jobs/fetch-live", AuthMiddleware(), FetchLiveJobs)
 	router.GET("/jobs/live-recommended", AuthMiddleware(), GetLiveRecommendedJobs)
 	router.GET("/roadmap", AuthMiddleware(), GetCareerRoadmap)
-
+	router.POST("/saved-jobs", AuthMiddleware(), SaveJob)
+	router.GET("/saved-jobs", AuthMiddleware(), GetSavedJobs)
+	router.PUT("/saved-jobs/:id/status", AuthMiddleware(), UpdateSavedJobStatus)
 	port := os.Getenv("PORT")
 
 	if port == "" {
