@@ -626,3 +626,199 @@ function Badge({ children }: { children: React.ReactNode }) {
     </span>
   );
 }
+
+function ChatWidget({
+  chatOpen,
+  setChatOpen,
+  chatHistory,
+  chatMessage,
+  setChatMessage,
+  sendMessage,
+  loading,
+}: {
+  chatOpen: boolean;
+  setChatOpen: (value: boolean) => void;
+  chatHistory: { role: string; message: string }[];
+  chatMessage: string;
+  setChatMessage: (value: string) => void;
+  sendMessage: () => void;
+  loading: string;
+}) {
+  return (
+    <>
+      <button
+        onClick={() => setChatOpen(!chatOpen)}
+        className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-3xl shadow-2xl shadow-pink-500/30 transition hover:scale-105"
+        aria-label="Open AI Career Coach"
+      >
+        🤖
+      </button>
+
+      {chatOpen && (
+        <div className="fixed bottom-24 right-6 z-50 w-[420px] max-w-[92vw] overflow-hidden rounded-[2rem] border border-pink-500/30 bg-slate-950 shadow-2xl">
+          <div className="flex items-center justify-between border-b border-slate-800 bg-white/[0.04] p-4">
+            <div>
+              <h2 className="text-lg font-black text-pink-300">
+                AI Career Coach
+              </h2>
+              <p className="text-xs text-slate-400">
+                Ask about resumes, jobs, skills, and interviews
+              </p>
+            </div>
+
+            <button
+              onClick={() => setChatOpen(false)}
+              className="rounded-full px-3 py-1 text-slate-400 hover:bg-white/10 hover:text-white"
+              aria-label="Close AI Career Coach"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="h-80 overflow-y-auto p-4">
+            {chatHistory.length === 0 ? (
+              <div className="space-y-3 text-sm text-slate-400">
+                <p className="font-semibold text-slate-300">Try asking:</p>
+
+                <button
+                  onClick={() =>
+                    setChatMessage(
+                      "What should I learn next based on my resume?"
+                    )
+                  }
+                  className="block w-full rounded-xl bg-slate-800 px-3 py-2 text-left hover:bg-slate-700"
+                >
+                  What should I learn next?
+                </button>
+
+                <button
+                  onClick={() => setChatMessage("Which live jobs fit me best?")}
+                  className="block w-full rounded-xl bg-slate-800 px-3 py-2 text-left hover:bg-slate-700"
+                >
+                  Which live jobs fit me best?
+                </button>
+
+                <button
+                  onClick={() =>
+                    setChatMessage(
+                      "How can I improve my resume for backend roles?"
+                    )
+                  }
+                  className="block w-full rounded-xl bg-slate-800 px-3 py-2 text-left hover:bg-slate-700"
+                >
+                  How can I improve my resume?
+                </button>
+              </div>
+            ) : (
+              chatHistory.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`mb-3 ${
+                    msg.role === "user" ? "text-right" : "text-left"
+                  }`}
+                >
+                  <div
+                    className={`inline-block max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2 text-sm leading-6 ${
+                      msg.role === "user"
+                        ? "bg-cyan-400 text-slate-950"
+                        : "bg-slate-800 text-white"
+                    }`}
+                  >
+                    {msg.message}
+                  </div>
+                </div>
+              ))
+            )}
+
+            {loading === "chat" && (
+              <p className="text-sm text-pink-300">Coach is typing...</p>
+            )}
+          </div>
+
+          <div className="flex gap-2 border-t border-slate-800 p-4">
+            <input
+              type="text"
+              value={chatMessage}
+              onChange={(e) => setChatMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") sendMessage();
+              }}
+              placeholder="Ask your AI Career Coach..."
+              className="flex-1 rounded-xl bg-slate-800 px-4 py-3 text-white outline-none ring-1 ring-slate-700 focus:ring-2 focus:ring-pink-400"
+            />
+
+            <button
+              onClick={sendMessage}
+              className="rounded-xl bg-pink-500 px-4 py-3 font-bold hover:bg-pink-400"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function StatCard({
+  title,
+  value,
+  subtitle,
+}: {
+  title: string;
+  value: string | number;
+  subtitle: string;
+}) {
+  return (
+    <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-xl backdrop-blur transition hover:-translate-y-1 hover:bg-white/[0.08]">
+      <p className="text-sm text-slate-400">{title}</p>
+      <p className="mt-2 text-3xl font-black">{value}</p>
+      <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+    </div>
+  );
+}
+
+function InfoBlock({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+      <p className="text-sm text-slate-400">{title}</p>
+      <p className="mt-2 break-words font-semibold">{children}</p>
+    </div>
+  );
+}
+
+function SkillCloud({
+  skills,
+  color,
+}: {
+  skills: string[];
+  color: "blue" | "yellow";
+}) {
+  const classes =
+    color === "blue"
+      ? "bg-blue-500/15 text-blue-200"
+      : "bg-yellow-500/15 text-yellow-200";
+
+  if (!skills || skills.length === 0) {
+    return <p className="text-sm text-slate-500">No skills found yet.</p>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {skills.map((skill) => (
+        <span
+          key={skill}
+          className={`rounded-full px-3 py-1 text-sm font-semibold ${classes}`}
+        >
+          {skill}
+        </span>
+      ))}
+    </div>
+  );
+}
