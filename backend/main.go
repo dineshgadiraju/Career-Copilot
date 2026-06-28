@@ -11,6 +11,7 @@ import (
 )
 
 func main() {
+
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("No .env file found")
@@ -19,13 +20,29 @@ func main() {
 	ConnectDB()
 
 	router := gin.Default()
+
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"http://localhost:3000",
+			"https://careercopilot-dinesh.netlify.app",
+			"https://career-copilot-three-tau.vercel.app",
 			"https://hilarious-kataifi-9685f0.netlify.app",
 		},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowMethods: []string{
+			"GET",
+			"POST",
+			"PUT",
+			"DELETE",
+			"OPTIONS",
+		},
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Authorization",
+		},
+		ExposeHeaders: []string{
+			"Content-Length",
+		},
 		AllowCredentials: false,
 	}))
 
@@ -35,33 +52,41 @@ func main() {
 		})
 	})
 
+	// Authentication
 	router.POST("/register", Register)
 	router.POST("/login", Login)
 	router.GET("/profile", AuthMiddleware(), GetProfile)
 
+	// Resume
 	router.POST("/resume/upload", AuthMiddleware(), UploadResume)
 	router.GET("/resume/latest", AuthMiddleware(), GetLatestResume)
 	router.GET("/dashboard", AuthMiddleware(), GetDashboard)
 
-	router.GET("/jobs/recommended", AuthMiddleware(), GetRecommendedJobs)
-	router.POST("/jobs/fetch-live", AuthMiddleware(), FetchLiveJobs)
-	router.GET("/jobs/live-recommended", AuthMiddleware(), GetLiveRecommendedJobs)
-
+	// AI Features
 	router.GET("/roadmap", AuthMiddleware(), GetCareerRoadmap)
 	router.GET("/role-recommendation", AuthMiddleware(), GetRecommendedRole)
 	router.POST("/chat", AuthMiddleware(), CareerChat)
 
+	// Jobs
+	router.GET("/jobs/recommended", AuthMiddleware(), GetRecommendedJobs)
+	router.POST("/jobs/fetch-live", AuthMiddleware(), FetchLiveJobs)
+	router.GET("/jobs/live-recommended", AuthMiddleware(), GetLiveRecommendedJobs)
+	router.POST("/jobs/fetch-role-based", AuthMiddleware(), FetchRoleBasedLiveJobs)
+	router.POST("/jobs/refresh-daily", AuthMiddleware(), FetchLiveJobs)
+
+	// Saved Jobs
 	router.POST("/saved-jobs", AuthMiddleware(), SaveJob)
 	router.GET("/saved-jobs", AuthMiddleware(), GetSavedJobs)
 	router.PUT("/saved-jobs/:id/status", AuthMiddleware(), UpdateSavedJobStatus)
-
-	router.POST("/jobs/refresh-daily", AuthMiddleware(), FetchLiveJobs)
-	router.POST("/jobs/fetch-role-based", AuthMiddleware(), FetchRoleBasedLiveJobs)
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8081"
 	}
 
-	router.Run(":" + port)
+	log.Println("🚀 Backend running on port", port)
+
+	if err := router.Run(":" + port); err != nil {
+		log.Fatal(err)
+	}
 }
