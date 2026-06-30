@@ -1,16 +1,45 @@
 services:
   postgres:
     image: postgres:17
-    container_name: ai-career-postgres
-    restart: always
+    container_name: career-copilot-postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: welcome2ibm
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: careercopilot
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - career_copilot_pgdata:/var/lib/postgresql/data
+
+  ml-service:
+    build: ./ml-service
+    container_name: career-copilot-ml
+    ports:
+      - "8000:8000"
+
+  backend:
+    build: ./backend
+    container_name: career-copilot-backend
+    depends_on:
+      - postgres
+      - ml-service
+    environment:
+      PORT: 8081
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/careercopilot?sslmode=disable
+      ML_SERVICE_URL: http://ml-service:8000
+      JWT_SECRET: local-dev-secret
+    ports:
+      - "8081:8081"
+
+  frontend:
+    build: ./frontend
+    container_name: career-copilot-frontend
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8081
+    ports:
+      - "3000:3000"
 
 volumes:
-  postgres_data:
+  career_copilot_pgdata:
