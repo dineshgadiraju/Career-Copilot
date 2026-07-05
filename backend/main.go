@@ -18,6 +18,7 @@ func main() {
 	}
 
 	ConnectDB()
+	ConnectRedis()
 
 	router := gin.Default()
 
