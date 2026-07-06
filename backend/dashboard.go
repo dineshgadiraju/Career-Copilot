@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -42,6 +45,18 @@ func GetLatestResume(c *gin.Context) {
 
 func GetDashboard(c *gin.Context) {
 	userID := c.GetInt("user_id")
+	cacheKey := "dashboard:user:" + strconv.Itoa(userID)
+
+	if RedisClient != nil {
+		cachedDashboard, err := RedisClient.Get(Ctx, cacheKey).Result()
+		if err == nil {
+			var cachedData gin.H
+			if json.Unmarshal([]byte(cachedDashboard), &cachedData) == nil {
+				c.JSON(http.StatusOK, cachedData)
+				return
+			}
+		}
+	}
 
 	var name string
 	var filename string
@@ -102,11 +117,21 @@ func GetDashboard(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	response := gin.H{
 		"user":         name,
 		"latest_file":  filename,
 		"resume_score": score,
 		"skills":       skills,
 		"uploads":      uploads,
-	})
+		"cached":       false,
+	}
+
+	if RedisClient != nil {
+		jsonData, err := json.Marshal(response)
+		if err == nil {
+			RedisClient.Set(Ctx, cacheKey, jsonData, 10*time.Minute)
+		}
+	}
+
+	c.JSON(http.StatusOK, response)
 }

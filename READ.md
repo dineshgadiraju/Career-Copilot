@@ -28,6 +28,10 @@ https://ai-career-copilot-backend-yzm9.onrender.com/health
 * Protected API Routes
 
 ---
+### Reusume Tailoring
+
+- AI Resume Tailoring with ATS score, matched skills, missing skills, and improvement suggestions
+---
 
 ### 📄 Resume Intelligence
 

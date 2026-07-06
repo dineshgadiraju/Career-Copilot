@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,6 +14,11 @@ import (
 func UploadResume(c *gin.Context) {
 
 	file, err := c.FormFile("resume")
+	if RedisClient != nil {
+		userID := c.GetInt("user_id")
+		cacheKey := "dashboard:user:" + strconv.Itoa(userID)
+		RedisClient.Del(Ctx, cacheKey)
+	}
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
