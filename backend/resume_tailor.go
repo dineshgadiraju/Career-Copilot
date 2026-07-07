@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -63,11 +64,40 @@ func TailorResume(c *gin.Context) {
 		atsScore = (len(matchedSkills) * 100) / len(jobSkills)
 	}
 
-	suggestions := []string{
-		"Add missing skills naturally if you have real experience with them.",
-		"Quantify project impact using numbers, performance improvements, or user outcomes.",
-		"Align your resume bullets with the job description keywords.",
-		"Highlight backend, database, API, cloud, and deployment experience where relevant.",
+	prompt := fmt.Sprintf(`
+Resume Skills:
+%v
+
+Job Description:
+%s
+
+ATS Score:
+%d
+
+Matched Skills:
+%v
+
+Missing Skills:
+%v
+
+Give feedback in this format:
+
+1. Overall Fit Summary
+2. Recruiter Perspective
+3. Missing Keywords
+4. Resume Improvements
+5. Suggested Resume Bullet Points
+6. Interview Preparation Tips
+`, resumeSkills, req.JobDescription, atsScore, matchedSkills, missingSkills)
+
+	aiFeedback, err := CallOpenAI(
+		"You are an expert technical recruiter and resume coach. Give concise, practical resume feedback for software engineering roles.",
+		prompt,
+		700,
+	)
+
+	if err != nil {
+		aiFeedback = "AI feedback unavailable right now. Basic skill matching completed successfully."
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -76,6 +106,6 @@ func TailorResume(c *gin.Context) {
 		"job_skills":     jobSkills,
 		"matched_skills": matchedSkills,
 		"missing_skills": missingSkills,
-		"suggestions":    suggestions,
+		"ai_feedback":    aiFeedback,
 	})
 }

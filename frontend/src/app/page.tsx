@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useDropzone } from "react-dropzone";
-import ResumeTailorCard from "./components/ResumeTailorCard";
-
+import ResumeTailorCard from "@/components/ResumeTailorCard";
 const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081"
 )
@@ -659,11 +658,12 @@ export default function Home() {
             </div>
           </section>
         )}
+        {token && (
         <ResumeTailorCard
-           token={token}
-            apiBaseUrl={API_BASE_URL}
-          />
-
+         token={token}
+         apiBaseUrl={API_BASE_URL}
+        />
+        )}
         {liveJobs.length > 0 && (
           <section className="mt-8 rounded-[2rem] border border-pink-100 bg-white p-6 shadow-xl shadow-pink-100/70">
             <h2 className="mb-5 text-2xl font-black text-slate-950">

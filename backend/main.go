@@ -62,6 +62,7 @@ func main() {
 	router.POST("/resume/upload", AuthMiddleware(), UploadResume)
 	router.GET("/resume/latest", AuthMiddleware(), GetLatestResume)
 	router.GET("/dashboard", AuthMiddleware(), GetDashboard)
+	router.POST("/resume/tailor", AuthMiddleware(), TailorResume)
 
 	// AI Features
 	router.GET("/roadmap", AuthMiddleware(), GetCareerRoadmap)
@@ -79,6 +80,10 @@ func main() {
 	router.POST("/saved-jobs", AuthMiddleware(), SaveJob)
 	router.GET("/saved-jobs", AuthMiddleware(), GetSavedJobs)
 	router.PUT("/saved-jobs/:id/status", AuthMiddleware(), UpdateSavedJobStatus)
+	router.POST("/applications", AuthMiddleware(), CreateApplication)
+	router.GET("/applications", AuthMiddleware(), GetApplications)
+	router.PUT("/applications/:id", AuthMiddleware(), UpdateApplicationStatus)
+	router.DELETE("/applications/:id", AuthMiddleware(), DeleteApplication)
 
 	port := os.Getenv("PORT")
 	if port == "" {
