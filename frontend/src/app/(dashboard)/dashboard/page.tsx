@@ -86,10 +86,14 @@ export default function DashboardPage() {
           </Link>
         </section>
 
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
-          <Card title="Resume Score" value={`${dashboard.resume_score}%`} />
-          <Card title="Uploads" value={dashboard.uploads} />
-          <Card title="Latest Resume" value={dashboard.latest_file} small />
+        <section className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-5 mb-6">
+            <Card title="Resume Score" value={`${dashboard.resume_score}%`} />
+            <Card title="Uploads" value={dashboard.uploads} />
+            <Card title="Latest Resume" value={dashboard.latest_file} small />
+            <Card title="Applications" value={dashboard.total_applications || 0} />
+            <Card title="Interviews" value={dashboard.interviews || 0} />
+            <Card title="Offers" value={dashboard.offers || 0} />
+            <Card title="Rejected" value={dashboard.rejected || 0} />
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
