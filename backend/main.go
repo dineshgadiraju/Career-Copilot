@@ -11,7 +11,6 @@ import (
 )
 
 func main() {
-
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("No .env file found")
@@ -62,7 +61,9 @@ func main() {
 	router.POST("/resume/upload", AuthMiddleware(), UploadResume)
 	router.GET("/resume/latest", AuthMiddleware(), GetLatestResume)
 	router.GET("/dashboard", AuthMiddleware(), GetDashboard)
-	router.POST("/resume/tailor", AuthMiddleware(), TailorResume)
+
+	// Temporarily disabled until helper functions are fixed
+	// router.POST("/resume/tailor", AuthMiddleware(), TailorResume)
 
 	// AI Features
 	router.GET("/roadmap", AuthMiddleware(), GetCareerRoadmap)
@@ -71,15 +72,19 @@ func main() {
 
 	// Jobs
 	router.GET("/jobs/recommended", AuthMiddleware(), GetRecommendedJobs)
-	router.POST("/jobs/fetch-live", AuthMiddleware(), FetchLiveJobs)
-	router.GET("/jobs/live-recommended", AuthMiddleware(), GetLiveRecommendedJobs)
-	router.POST("/jobs/fetch-role-based", AuthMiddleware(), FetchRoleBasedLiveJobs)
-	router.POST("/jobs/refresh-daily", AuthMiddleware(), FetchLiveJobs)
+
+	// Temporarily disabled old live job routes
+	// router.POST("/jobs/fetch-live", AuthMiddleware(), FetchLiveJobs)
+	// router.GET("/jobs/live-recommended", AuthMiddleware(), GetLiveRecommendedJobs)
+	// router.POST("/jobs/fetch-role-based", AuthMiddleware(), FetchRoleBasedLiveJobs)
+	// router.POST("/jobs/refresh-daily", AuthMiddleware(), FetchLiveJobs)
 
 	// Saved Jobs
 	router.POST("/saved-jobs", AuthMiddleware(), SaveJob)
 	router.GET("/saved-jobs", AuthMiddleware(), GetSavedJobs)
 	router.PUT("/saved-jobs/:id/status", AuthMiddleware(), UpdateSavedJobStatus)
+
+	// Applications
 	router.POST("/applications", AuthMiddleware(), CreateApplication)
 	router.GET("/applications", AuthMiddleware(), GetApplications)
 	router.PUT("/applications/:id", AuthMiddleware(), UpdateApplicationStatus)

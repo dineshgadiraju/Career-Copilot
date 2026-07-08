@@ -2,29 +2,44 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
+type RemotiveResponse struct {
+	Jobs []RemotiveJob `json:"jobs"`
+}
+
+type RemotiveJob struct {
+	ID                        int    `json:"id"`
+	Title                     string `json:"title"`
+	CompanyName               string `json:"company_name"`
+	URL                       string `json:"url"`
+	JobType                   string `json:"job_type"`
+	CandidateRequiredLocation string `json:"candidate_required_location"`
+	Description               string `json:"description"`
+}
+
 type JobRecommendation struct {
-	ID                      int      `json:"id"`
-	Title                   string   `json:"title"`
-	Company                 string   `json:"company"`
-	RequiredSkills          []string `json:"required_skills"`
-	MatchedSkills           []string `json:"matched_skills"`
-	MissingSkills           []string `json:"missing_skills"`
-	LearningRecommendations []string `json:"learning_recommendations"`
-	MatchScore              int      `json:"match_score"`
-	ApplyURL                string   `json:"apply_url"`
+	ID            int      `json:"id"`
+	Title         string   `json:"title"`
+	Company       string   `json:"company"`
+	Location      string   `json:"location"`
+	JobType       string   `json:"job_type"`
+	MatchedSkills []string `json:"matched_skills"`
+	MissingSkills []string `json:"missing_skills"`
+	MatchScore    int      `json:"match_score"`
+	ApplyURL      string   `json:"apply_url"`
 }
 
 func normalizeSkill(skill string) string {
 	return strings.ToLower(strings.TrimSpace(skill))
 }
-
 func containsSkill(skills []string, target string) bool {
 	target = normalizeSkill(target)
 
@@ -35,6 +50,10 @@ func containsSkill(skills []string, target string) bool {
 	}
 
 	return false
+}
+
+func containsText(text string, target string) bool {
+	return strings.Contains(strings.ToLower(text), strings.ToLower(target))
 }
 
 func GetRecommendedJobs(c *gin.Context) {
@@ -56,69 +75,100 @@ func GetRecommendedJobs(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"error": "No resume found",
+			"error": "Upload a resume first to get personalized jobs",
 		})
 		return
 	}
 
-	rows, err := DB.Query(
-		context.Background(),
-		`
-		SELECT id, title, company, required_skills, COALESCE(apply_url, '')
-		FROM jobs
-		`,
-	)
+	searchTerms := "software engineer"
 
+	if len(resumeSkills) > 0 {
+		searchTerms = strings.Join(resumeSkills, " ")
+	}
+
+	apiURL := "https://remotive.com/api/remote-jobs?search=" + url.QueryEscape(searchTerms)
+
+	resp, err := http.Get(apiURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to fetch jobs",
+			"error": "Failed to fetch live jobs",
+		})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Jobs API returned an error",
 		})
 		return
 	}
 
-	defer rows.Close()
+	var remotiveData RemotiveResponse
+
+	err = json.NewDecoder(resp.Body).Decode(&remotiveData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to parse jobs response",
+		})
+		return
+	}
 
 	recommendations := []JobRecommendation{}
 
-	for rows.Next() {
-		var job JobRecommendation
+	for _, liveJob := range remotiveData.Jobs {
+		location := strings.ToLower(liveJob.CandidateRequiredLocation)
 
-		err := rows.Scan(
-			&job.ID,
-			&job.Title,
-			&job.Company,
-			&job.RequiredSkills,
-			&job.ApplyURL,
-		)
+		isUSJob := strings.Contains(location, "united states") ||
+			strings.Contains(location, "usa") ||
+			strings.Contains(location, "u.s") ||
+			strings.Contains(location, "us only") ||
+			strings.Contains(location, "north america")
 
-		if err != nil {
+		if !isUSJob {
 			continue
 		}
+		jobText := liveJob.Title + " " + liveJob.Description
 
-		for _, requiredSkill := range job.RequiredSkills {
-			if containsSkill(resumeSkills, requiredSkill) {
-				job.MatchedSkills = append(job.MatchedSkills, requiredSkill)
+		matchedSkills := []string{}
+		missingSkills := []string{}
+
+		for _, skill := range resumeSkills {
+			if containsText(jobText, skill) {
+				matchedSkills = append(matchedSkills, skill)
 			} else {
-				job.MissingSkills = append(job.MissingSkills, requiredSkill)
-				job.LearningRecommendations = append(
-					job.LearningRecommendations,
-					requiredSkill,
-				)
+				missingSkills = append(missingSkills, skill)
 			}
 		}
 
-		if len(job.RequiredSkills) > 0 {
-			job.MatchScore = (len(job.MatchedSkills) * 100) / len(job.RequiredSkills)
+		matchScore := 0
+		if len(resumeSkills) > 0 {
+			matchScore = (len(matchedSkills) * 100) / len(resumeSkills)
 		}
 
-		recommendations = append(recommendations, job)
+		recommendations = append(recommendations, JobRecommendation{
+			ID:            liveJob.ID,
+			Title:         liveJob.Title,
+			Company:       liveJob.CompanyName,
+			Location:      liveJob.CandidateRequiredLocation,
+			JobType:       liveJob.JobType,
+			MatchedSkills: matchedSkills,
+			MissingSkills: missingSkills,
+			MatchScore:    matchScore,
+			ApplyURL:      liveJob.URL,
+		})
 	}
 
 	sort.Slice(recommendations, func(i, j int) bool {
 		return recommendations[i].MatchScore > recommendations[j].MatchScore
 	})
 
+	if len(recommendations) > 20 {
+		recommendations = recommendations[:20]
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"jobs": recommendations,
+		"jobs":  recommendations,
+		"query": searchTerms,
 	})
 }
