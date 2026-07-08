@@ -55,7 +55,7 @@ export async function getTailorHistory(token: string) {
   });
 
   const data = await res.json();
-
+  console.log("Tailor history API:", data);
   if (!res.ok) {
     throw new Error(data.error || "Failed to fetch tailor history");
   }

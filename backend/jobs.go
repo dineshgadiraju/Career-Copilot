@@ -153,7 +153,6 @@ func GetRecommendedJobs(c *gin.Context) {
 			Company:       liveJob.CompanyName,
 			Location:      liveJob.CandidateRequiredLocation,
 			JobType:       liveJob.JobType,
-			Description:   liveJob.Description,
 			MatchedSkills: matchedSkills,
 			MissingSkills: missingSkills,
 			MatchScore:    matchScore,

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -206,7 +207,7 @@ func SaveTailorResult(c *gin.Context) {
 
 func GetTailorHistory(c *gin.Context) {
 	userID := c.GetInt("user_id")
-
+	fmt.Println("Logged in user ID:", userID)
 	rows, err := DB.Query(
 		context.Background(),
 		`
@@ -225,8 +226,10 @@ func GetTailorHistory(c *gin.Context) {
 	defer rows.Close()
 
 	history := []gin.H{}
-
+	count := 0
 	for rows.Next() {
+		count++
+		fmt.Println("Found history row:", count)
 		var id int
 		var jobTitle string
 		var company string
@@ -234,7 +237,7 @@ func GetTailorHistory(c *gin.Context) {
 		var matchedSkills []string
 		var missingSkills []string
 		var aiFeedback string
-		var createdAt string
+		var createdAt time.Time
 
 		err := rows.Scan(
 			&id,
@@ -248,6 +251,7 @@ func GetTailorHistory(c *gin.Context) {
 		)
 
 		if err != nil {
+			fmt.Println("SCAN ERROR:", err)
 			continue
 		}
 
@@ -259,9 +263,12 @@ func GetTailorHistory(c *gin.Context) {
 			"matched_skills": matchedSkills,
 			"missing_skills": missingSkills,
 			"ai_feedback":    aiFeedback,
-			"created_at":     createdAt,
+			"created_at": createdAt.Format("2006-01-02 15:04"),
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"history": history})
+	c.JSON(http.StatusOK, gin.H{
+		"user_id": userID,
+		"history": history,
+	})
 }
