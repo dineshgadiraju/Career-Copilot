@@ -31,6 +31,7 @@ type JobRecommendation struct {
 	Company       string   `json:"company"`
 	Location      string   `json:"location"`
 	JobType       string   `json:"job_type"`
+	Description   string   `json:"description"`
 	MatchedSkills []string `json:"matched_skills"`
 	MissingSkills []string `json:"missing_skills"`
 	MatchScore    int      `json:"match_score"`
@@ -152,6 +153,7 @@ func GetRecommendedJobs(c *gin.Context) {
 			Company:       liveJob.CompanyName,
 			Location:      liveJob.CandidateRequiredLocation,
 			JobType:       liveJob.JobType,
+			Description:   liveJob.Description,
 			MatchedSkills: matchedSkills,
 			MissingSkills: missingSkills,
 			MatchScore:    matchScore,

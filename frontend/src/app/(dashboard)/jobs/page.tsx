@@ -81,9 +81,18 @@ Title: ${job.title}
 Company: ${job.company}
 Location: ${job.location}
 Job Type: ${job.job_type}
-Matched Skills: ${job.matched_skills?.join(", ")}
-Missing Skills: ${job.missing_skills?.join(", ")}
-Apply URL: ${job.apply_url}
+
+Job Description:
+${job.description}
+
+Matched Skills:
+${job.matched_skills?.join(", ")}
+
+Missing Skills:
+${job.missing_skills?.join(", ")}
+
+Apply URL:
+${job.apply_url}
 `;
 
     try {
