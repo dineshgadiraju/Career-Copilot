@@ -59,10 +59,10 @@ func GetDashboard(c *gin.Context) {
 	}
 
 	var name string
-	var filename string
-	var score int
-	var skills []string
-	var uploads int
+	var filename string = "No resume uploaded"
+	var score int = 0
+	var skills []string = []string{}
+	var uploads int = 0
 
 	err := DB.QueryRow(
 		context.Background(),
@@ -81,7 +81,7 @@ func GetDashboard(c *gin.Context) {
 		return
 	}
 
-	err = DB.QueryRow(
+	_ = DB.QueryRow(
 		context.Background(),
 		`
 		SELECT filename, score, skills
@@ -93,14 +93,7 @@ func GetDashboard(c *gin.Context) {
 		userID,
 	).Scan(&filename, &score, &skills)
 
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "No resume found",
-		})
-		return
-	}
-
-	err = DB.QueryRow(
+	_ = DB.QueryRow(
 		context.Background(),
 		`
 		SELECT COUNT(*)
@@ -109,13 +102,6 @@ func GetDashboard(c *gin.Context) {
 		`,
 		userID,
 	).Scan(&uploads)
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to count uploads",
-		})
-		return
-	}
 
 	response := gin.H{
 		"user":         name,

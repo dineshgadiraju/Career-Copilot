@@ -7,8 +7,14 @@ export async function getApplications(token: string) {
     },
   });
 
-  if (!res.ok) throw new Error("Failed to fetch applications");
-  return res.json();
+  const data = await res.json();
+
+  if (!res.ok) {
+    console.error("Applications API error:", data);
+    throw new Error(data.error || "Failed to fetch applications");
+  }
+
+  return data.applications || [];
 }
 
 export async function createApplication(token: string, application: any) {

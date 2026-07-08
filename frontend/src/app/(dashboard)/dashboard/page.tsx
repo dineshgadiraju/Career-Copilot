@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { getDashboard } from "@/services/dashboard";
+
 export default function DashboardPage() {
   const router = useRouter();
   const [dashboard, setDashboard] = useState<any>(null);
@@ -56,6 +58,32 @@ export default function DashboardPage() {
           <p className="text-slate-500 text-sm">
             Monitor your resume, applications, and job search progress.
           </p>
+        </section>
+
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+          <Link
+            href="/applications"
+            className="bg-white border border-slate-200 rounded-2xl p-6 hover:bg-slate-50"
+          >
+            <p className="text-sm text-slate-500">Applications</p>
+            <p className="mt-2 text-3xl font-semibold">Open</p>
+          </Link>
+
+          <Link
+            href="/resume"
+            className="bg-white border border-slate-200 rounded-2xl p-6 hover:bg-slate-50"
+          >
+            <p className="text-sm text-slate-500">Resume</p>
+            <p className="mt-2 text-3xl font-semibold">Upload</p>
+          </Link>
+
+          <Link
+            href="/jobs"
+            className="bg-white border border-slate-200 rounded-2xl p-6 hover:bg-slate-50"
+          >
+            <p className="text-sm text-slate-500">Live Jobs</p>
+            <p className="mt-2 text-3xl font-semibold">View</p>
+          </Link>
         </section>
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
