@@ -15,6 +15,7 @@ export default function JobsPage() {
   const [savingJobId, setSavingJobId] = useState<number | null>(null);
   const [tailoringJobId, setTailoringJobId] = useState<number | null>(null);
   const [tailorResult, setTailorResult] = useState<any>(null);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     async function loadJobs() {
@@ -30,7 +31,7 @@ export default function JobsPage() {
         setJobs(data.jobs || []);
         setQuery(data.query || "");
       } catch (err: any) {
-        alert(err.message);
+        setMessage(err.message);
       } finally {
         setLoading(false);
       }
@@ -48,6 +49,7 @@ export default function JobsPage() {
     }
 
     setSavingJobId(job.id);
+    setMessage("");
 
     try {
       await createApplication(token, {
@@ -57,9 +59,9 @@ export default function JobsPage() {
         job_url: job.apply_url,
       });
 
-      alert("Job saved to Applications");
+      setMessage("Job saved to Applications.");
     } catch (err: any) {
-      alert(err.message);
+      setMessage(err.message);
     } finally {
       setSavingJobId(null);
     }
@@ -75,6 +77,7 @@ export default function JobsPage() {
 
     setTailoringJobId(job.id);
     setTailorResult(null);
+    setMessage("");
 
     const jobDescription = `
 Title: ${job.title}
@@ -97,13 +100,16 @@ ${job.apply_url}
 
     try {
       const data = await tailorResume(token, jobDescription);
+
       setTailorResult({
         jobTitle: job.title,
         company: job.company,
         ...data,
       });
+
+      setMessage("Resume tailoring completed.");
     } catch (err: any) {
-      alert(err.message);
+      setMessage(err.message);
     } finally {
       setTailoringJobId(null);
     }
@@ -118,22 +124,27 @@ ${job.apply_url}
     }
 
     if (!tailorResult) {
-      alert("No tailoring result to save");
+      setMessage("No tailoring result to save.");
       return;
     }
 
     try {
       await saveTailorResult(token, tailorResult);
-      alert("Tailoring result saved");
+      setMessage("Tailoring result saved to history.");
     } catch (err: any) {
-      alert(err.message);
+      setMessage(err.message);
     }
   }
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
-        <h2 className="text-xl font-semibold">Loading personalized jobs...</h2>
+      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="bg-white border border-slate-200 rounded-2xl px-8 py-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Loading personalized jobs...</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Matching live U.S. roles with your resume skills.
+          </p>
+        </div>
       </main>
     );
   }
@@ -141,41 +152,76 @@ ${job.apply_url}
   return (
     <main className="min-h-screen bg-[#f8fafc] text-slate-900">
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">🎯 Recommended Live Jobs</h1>
+        <div className="bg-white border border-slate-200 rounded-3xl p-7 shadow-sm mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+            <div>
+              <div className="flex flex-wrap items-center gap-3 mb-3">
+                <h1 className="text-3xl font-bold">Recommended Live Jobs</h1>
+                <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium">
+                  U.S. only
+                </span>
+                <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
+                  Resume matched
+                </span>
+              </div>
 
-          <p className="text-slate-500 mt-2">
-            Personalized using your uploaded resume skills.
-          </p>
+              <p className="text-slate-500">
+                Personalized roles ranked using your uploaded resume skills.
+              </p>
 
-          <p className="text-sm mt-2 text-blue-600">
-            Search Query: <strong>{query}</strong>
-          </p>
+              <p className="text-sm mt-3 text-slate-500">
+                Search query:{" "}
+                <span className="font-medium text-slate-900">{query}</span>
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 min-w-[300px]">
+              <MiniStat label="Jobs" value={jobs.length} />
+              <MiniStat
+                label="Top Match"
+                value={
+                  jobs.length > 0
+                    ? `${Math.max(...jobs.map((j) => j.match_score || 0))}%`
+                    : "0%"
+                }
+              />
+              <MiniStat label="Region" value="US" />
+            </div>
+          </div>
         </div>
 
+        {message && (
+          <div className="mb-6 border border-slate-200 bg-white rounded-2xl px-5 py-4 text-sm text-slate-700 shadow-sm">
+            {message}
+          </div>
+        )}
+
         {tailorResult && (
-          <div className="mb-8 bg-white border border-blue-200 rounded-2xl p-6 shadow">
-            <div className="flex justify-between items-start">
+          <div className="mb-8 bg-white border border-blue-200 rounded-3xl p-7 shadow-sm">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
               <div>
-                <h2 className="text-2xl font-bold">
-                  ✨ Resume Tailoring Result
+                <p className="text-sm font-medium text-blue-600">
+                  AI Resume Tailoring
+                </p>
+                <h2 className="text-2xl font-bold mt-1">
+                  {tailorResult.jobTitle}
                 </h2>
                 <p className="text-slate-500 mt-1">
-                  {tailorResult.jobTitle} at {tailorResult.company}
+                  {tailorResult.company}
                 </p>
               </div>
 
               <div className="flex gap-3">
                 <button
                   onClick={handleSaveTailorResult}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm hover:bg-blue-700"
                 >
                   Save Result
                 </button>
 
                 <button
                   onClick={() => setTailorResult(null)}
-                  className="text-sm text-slate-500 hover:text-slate-900"
+                  className="border border-slate-300 px-4 py-2 rounded-xl text-sm hover:bg-slate-50"
                 >
                   Close
                 </button>
@@ -183,112 +229,106 @@ ${job.apply_url}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-              <div className="bg-slate-50 rounded-xl p-4">
-                <p className="text-sm text-slate-500">ATS Score</p>
-                <p className="text-3xl font-bold text-green-600">
-                  {tailorResult.ats_score}%
-                </p>
-              </div>
-
-              <div className="bg-slate-50 rounded-xl p-4">
-                <p className="text-sm text-slate-500">Matched Skills</p>
-                <p className="text-3xl font-bold">
-                  {tailorResult.matched_skills?.length || 0}
-                </p>
-              </div>
-
-              <div className="bg-slate-50 rounded-xl p-4">
-                <p className="text-sm text-slate-500">Missing Skills</p>
-                <p className="text-3xl font-bold text-red-600">
-                  {tailorResult.missing_skills?.length || 0}
-                </p>
-              </div>
+              <ResultCard
+                label="ATS Score"
+                value={`${tailorResult.ats_score}%`}
+                tone="green"
+              />
+              <ResultCard
+                label="Matched Skills"
+                value={tailorResult.matched_skills?.length || 0}
+              />
+              <ResultCard
+                label="Missing Skills"
+                value={tailorResult.missing_skills?.length || 0}
+                tone="red"
+              />
             </div>
 
             <div className="mt-6">
               <h3 className="font-semibold mb-2">Missing Keywords</h3>
               <div className="flex flex-wrap gap-2">
-                {tailorResult.missing_skills?.map((skill: string) => (
-                  <span
-                    key={skill}
-                    className="px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm"
-                  >
-                    {skill}
-                  </span>
-                ))}
+                {tailorResult.missing_skills?.length > 0 ? (
+                  tailorResult.missing_skills.map((skill: string) => (
+                    <span
+                      key={skill}
+                      className="px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm"
+                    >
+                      {skill}
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    No major missing keywords detected.
+                  </p>
+                )}
               </div>
             </div>
 
             <div className="mt-6">
               <h3 className="font-semibold mb-2">AI Recruiter Feedback</h3>
-              <pre className="whitespace-pre-wrap bg-slate-50 rounded-xl p-4 text-sm text-slate-700">
+              <div className="whitespace-pre-wrap bg-slate-50 rounded-2xl p-5 text-sm text-slate-700 border border-slate-200">
                 {tailorResult.ai_feedback}
-              </pre>
+              </div>
             </div>
           </div>
         )}
 
         {jobs.length === 0 ? (
-          <div className="bg-white rounded-xl p-8 shadow">
-            <p className="text-lg">No jobs found.</p>
+          <div className="bg-white border border-slate-200 rounded-3xl p-10 shadow-sm">
+            <h2 className="text-xl font-semibold">No jobs found.</h2>
             <p className="text-slate-500 mt-2">
-              Upload a resume first or try again later.
+              Upload a resume first, or try again later when new roles are available.
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-5">
             {jobs.map((job) => (
               <div
                 key={job.id}
-                className="bg-white rounded-2xl shadow border p-6"
+                className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition"
               >
-                <div className="flex justify-between items-start">
-                  <div>
+                <div className="flex flex-col lg:flex-row lg:justify-between gap-5">
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs">
+                        Live role
+                      </span>
+                      <span className="px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-xs">
+                        United States
+                      </span>
+                    </div>
+
                     <h2 className="text-xl font-bold">{job.title}</h2>
                     <p className="text-slate-600 mt-1">{job.company}</p>
-                    <p className="text-sm text-slate-500">
-                      {job.location} • {job.job_type}
+                    <p className="text-sm text-slate-500 mt-1">
+                      {job.location || "United States"} •{" "}
+                      {job.job_type || "Remote"}
                     </p>
                   </div>
 
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600">
+                  <div className="lg:text-right">
+                    <p className="text-4xl font-bold text-green-600">
                       {job.match_score}%
-                    </div>
-                    <div className="text-xs text-slate-500">Match</div>
+                    </p>
+                    <p className="text-xs text-slate-500">Resume match</p>
                   </div>
                 </div>
 
-                <div className="mt-6">
-                  <h3 className="font-semibold">✅ Matched Skills</h3>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {job.matched_skills?.length > 0 ? (
-                      job.matched_skills.map((skill: string) => (
-                        <span
-                          key={skill}
-                          className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm"
-                        >
-                          {skill}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-slate-400">None</span>
-                    )}
-                  </div>
-                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-6">
+                  <SkillBox
+                    title="Matched Skills"
+                    emptyText="No direct matches found."
+                    skills={job.matched_skills || []}
+                    color="green"
+                  />
 
-                <div className="mt-5">
-                  <h3 className="font-semibold">📚 Missing Skills</h3>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {job.missing_skills?.slice(0, 8).map((skill: string) => (
-                      <span
-                        key={skill}
-                        className="px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
+                  <SkillBox
+                    title="Missing Skills"
+                    emptyText="No major gaps detected."
+                    skills={(job.missing_skills || []).slice(0, 8)}
+                    color="red"
+                  />
                 </div>
 
                 <div className="mt-6 flex flex-wrap gap-3">
@@ -296,7 +336,7 @@ ${job.apply_url}
                     href={job.apply_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-slate-900 text-white px-5 py-2 rounded-lg hover:bg-slate-700"
+                    className="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm hover:bg-slate-700"
                   >
                     Apply Now
                   </a>
@@ -304,7 +344,7 @@ ${job.apply_url}
                   <button
                     onClick={() => handleSaveJob(job)}
                     disabled={savingJobId === job.id}
-                    className="border border-slate-300 px-5 py-2 rounded-lg hover:bg-slate-100 disabled:opacity-60"
+                    className="border border-slate-300 px-5 py-2.5 rounded-xl text-sm hover:bg-slate-50 disabled:opacity-60"
                   >
                     {savingJobId === job.id ? "Saving..." : "Save Job"}
                   </button>
@@ -312,7 +352,7 @@ ${job.apply_url}
                   <button
                     onClick={() => handleTailorResume(job)}
                     disabled={tailoringJobId === job.id}
-                    className="border border-blue-300 text-blue-700 px-5 py-2 rounded-lg hover:bg-blue-50 disabled:opacity-60"
+                    className="border border-blue-300 text-blue-700 px-5 py-2.5 rounded-xl text-sm hover:bg-blue-50 disabled:opacity-60"
                   >
                     {tailoringJobId === job.id
                       ? "Tailoring..."
@@ -325,5 +365,75 @@ ${job.apply_url}
         )}
       </div>
     </main>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="text-xl font-bold mt-1">{value}</p>
+    </div>
+  );
+}
+
+function ResultCard({
+  label,
+  value,
+  tone = "slate",
+}: {
+  label: string;
+  value: string | number;
+  tone?: "green" | "red" | "slate";
+}) {
+  const color =
+    tone === "green"
+      ? "text-green-600"
+      : tone === "red"
+      ? "text-red-600"
+      : "text-slate-900";
+
+  return (
+    <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200">
+      <p className="text-sm text-slate-500">{label}</p>
+      <p className={`text-3xl font-bold mt-2 ${color}`}>{value}</p>
+    </div>
+  );
+}
+
+function SkillBox({
+  title,
+  skills,
+  emptyText,
+  color,
+}: {
+  title: string;
+  skills: string[];
+  emptyText: string;
+  color: "green" | "red";
+}) {
+  const classes =
+    color === "green"
+      ? "bg-green-100 text-green-700"
+      : "bg-red-100 text-red-700";
+
+  return (
+    <div>
+      <h3 className="font-semibold mb-2">{title}</h3>
+      <div className="flex flex-wrap gap-2">
+        {skills.length > 0 ? (
+          skills.map((skill: string) => (
+            <span
+              key={skill}
+              className={`px-3 py-1 rounded-full text-sm ${classes}`}
+            >
+              {skill}
+            </span>
+          ))
+        ) : (
+          <p className="text-sm text-slate-500">{emptyText}</p>
+        )}
+      </div>
+    </div>
   );
 }
