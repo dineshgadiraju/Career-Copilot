@@ -109,3 +109,56 @@ Give feedback in this format:
 		"ai_feedback":    aiFeedback,
 	})
 }
+func extractSkillsFromText(text string) []string {
+	text = strings.ToLower(text)
+
+	skillKeywords := []string{
+		"java",
+		"python",
+		"go",
+		"golang",
+		"javascript",
+		"typescript",
+		"react",
+		"next.js",
+		"node.js",
+		"express",
+		"html",
+		"css",
+		"tailwind",
+		"sql",
+		"postgresql",
+		"mysql",
+		"mongodb",
+		"redis",
+		"docker",
+		"kubernetes",
+		"aws",
+		"azure",
+		"gcp",
+		"rest",
+		"graphql",
+		"api",
+		"microservices",
+		"ci/cd",
+		"github actions",
+		"fastapi",
+		"gin",
+		"machine learning",
+		"tensorflow",
+		"pytorch",
+		"scikit-learn",
+		"nlp",
+		"llm",
+	}
+
+	foundSkills := []string{}
+
+	for _, skill := range skillKeywords {
+		if strings.Contains(text, skill) {
+			foundSkills = append(foundSkills, skill)
+		}
+	}
+
+	return foundSkills
+}

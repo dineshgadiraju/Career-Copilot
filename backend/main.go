@@ -62,8 +62,7 @@ func main() {
 	router.GET("/resume/latest", AuthMiddleware(), GetLatestResume)
 	router.GET("/dashboard", AuthMiddleware(), GetDashboard)
 
-	// Temporarily disabled until helper functions are fixed
-	// router.POST("/resume/tailor", AuthMiddleware(), TailorResume)
+	router.POST("/resume/tailor", AuthMiddleware(), TailorResume)
 
 	// AI Features
 	router.GET("/roadmap", AuthMiddleware(), GetCareerRoadmap)
