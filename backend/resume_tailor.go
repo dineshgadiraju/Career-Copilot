@@ -9,6 +9,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type SaveTailorResultRequest struct {
+	JobTitle      string   `json:"job_title"`
+	Company       string   `json:"company"`
+	ATSScore      int      `json:"ats_score"`
+	MatchedSkills []string `json:"matched_skills"`
+	MissingSkills []string `json:"missing_skills"`
+	AIFeedback    string   `json:"ai_feedback"`
+}
 type TailorResumeRequest struct {
 	JobDescription string `json:"job_description"`
 }
@@ -161,4 +169,99 @@ func extractSkillsFromText(text string) []string {
 	}
 
 	return foundSkills
+}
+func SaveTailorResult(c *gin.Context) {
+	userID := c.GetInt("user_id")
+
+	var req SaveTailorResultRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	_, err := DB.Exec(
+		context.Background(),
+		`
+		INSERT INTO tailored_resumes
+		(user_id, job_title, company, ats_score, matched_skills, missing_skills, ai_feedback)
+		VALUES ($1,$2,$3,$4,$5,$6,$7)
+		`,
+		userID,
+		req.JobTitle,
+		req.Company,
+		req.ATSScore,
+		req.MatchedSkills,
+		req.MissingSkills,
+		req.AIFeedback,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Tailoring result saved"})
+}
+
+func GetTailorHistory(c *gin.Context) {
+	userID := c.GetInt("user_id")
+
+	rows, err := DB.Query(
+		context.Background(),
+		`
+		SELECT id, job_title, company, ats_score, matched_skills, missing_skills, ai_feedback, created_at
+		FROM tailored_resumes
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+		`,
+		userID,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tailor history"})
+		return
+	}
+	defer rows.Close()
+
+	history := []gin.H{}
+
+	for rows.Next() {
+		var id int
+		var jobTitle string
+		var company string
+		var atsScore int
+		var matchedSkills []string
+		var missingSkills []string
+		var aiFeedback string
+		var createdAt string
+
+		err := rows.Scan(
+			&id,
+			&jobTitle,
+			&company,
+			&atsScore,
+			&matchedSkills,
+			&missingSkills,
+			&aiFeedback,
+			&createdAt,
+		)
+
+		if err != nil {
+			continue
+		}
+
+		history = append(history, gin.H{
+			"id":             id,
+			"job_title":      jobTitle,
+			"company":        company,
+			"ats_score":      atsScore,
+			"matched_skills": matchedSkills,
+			"missing_skills": missingSkills,
+			"ai_feedback":    aiFeedback,
+			"created_at":     createdAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"history": history})
 }

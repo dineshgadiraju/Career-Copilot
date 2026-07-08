@@ -69,6 +69,8 @@ func main() {
 	router.GET("/role-recommendation", AuthMiddleware(), GetRecommendedRole)
 	router.POST("/chat", AuthMiddleware(), CareerChat)
 
+	router.POST("/resume/tailor/save", AuthMiddleware(), SaveTailorResult)
+	router.GET("/resume/tailor/history", AuthMiddleware(), GetTailorHistory)
 	// Jobs
 	router.GET("/jobs/recommended", AuthMiddleware(), GetRecommendedJobs)
 

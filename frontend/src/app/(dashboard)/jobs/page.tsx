@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getRecommendedJobs } from "@/services/jobs";
 import { createApplication } from "@/services/applications";
-import { tailorResume } from "@/services/tailor";
+import { tailorResume, saveTailorResult } from "@/services/tailor";
 
 export default function JobsPage() {
   const router = useRouter();
@@ -109,6 +109,27 @@ ${job.apply_url}
     }
   }
 
+  async function handleSaveTailorResult() {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
+    if (!tailorResult) {
+      alert("No tailoring result to save");
+      return;
+    }
+
+    try {
+      await saveTailorResult(token, tailorResult);
+      alert("Tailoring result saved");
+    } catch (err: any) {
+      alert(err.message);
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
@@ -144,12 +165,21 @@ ${job.apply_url}
                 </p>
               </div>
 
-              <button
-                onClick={() => setTailorResult(null)}
-                className="text-sm text-slate-500 hover:text-slate-900"
-              >
-                Close
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSaveTailorResult}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
+                >
+                  Save Result
+                </button>
+
+                <button
+                  onClick={() => setTailorResult(null)}
+                  className="text-sm text-slate-500 hover:text-slate-900"
+                >
+                  Close
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
