@@ -7,15 +7,11 @@ from parser import extract_text
 from skills import extract_skills
 from scoring import calculate_score
 from pydantic import BaseModel
-from pydantic import BaseModel
-from dotenv import load_dotenv
 import google.generativeai as genai
 
 app = FastAPI()
-load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-model = genai.GenerativeModel("gemini-flash-latest")
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 class ResumeRequest(BaseModel):
     resume_text: str
 
