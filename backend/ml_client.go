@@ -8,8 +8,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
-	"strings"
 	"path/filepath"
+	"strings"
 )
 
 type ResumeAnalysis struct {
@@ -17,6 +17,7 @@ type ResumeAnalysis struct {
 	Skills     []string `json:"skills"`
 	Score      int      `json:"score"`
 	TextLength int      `json:"text_length"`
+	ResumeText string   `json:"resume_text"`
 }
 
 func AnalyzeResume(path string) (*ResumeAnalysis, error) {
@@ -81,6 +82,52 @@ func AnalyzeResume(path string) (*ResumeAnalysis, error) {
 
 	if err := json.Unmarshal(rawBody, &result); err != nil {
 		return nil, fmt.Errorf("ML service returned non-JSON response: %s", string(rawBody[:min(len(rawBody), 300)]))
+	}
+
+	return &result, nil
+}
+
+type RoleRecommendationRequest struct {
+	ResumeText string `json:"resume_text"`
+}
+
+type RoleRecommendationResponse struct {
+	Roles []string `json:"roles"`
+}
+
+func RecommendRoles(resumeText string) (*RoleRecommendationResponse, error) {
+
+	mlServiceURL := os.Getenv("ML_SERVICE_URL")
+	if mlServiceURL == "" {
+		mlServiceURL = "http://localhost:8000"
+	}
+
+	mlServiceURL = strings.TrimRight(mlServiceURL, "/")
+
+	requestBody := RoleRecommendationRequest{
+		ResumeText: resumeText,
+	}
+
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.Post(
+		mlServiceURL+"/recommend-role",
+		"application/json",
+		bytes.NewBuffer(jsonBody),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var result RoleRecommendationResponse
+
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		return nil, err
 	}
 
 	return &result, nil

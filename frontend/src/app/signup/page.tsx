@@ -1,31 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { login } from "@/services/auth";
+import { useRouter } from "next/navigation";
+import { register } from "@/services/auth";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
+
     setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const data = await login(email, password);
+      await register(email, password);
 
-      localStorage.setItem("token", data.token);
-
-      router.push("/dashboard");
+      router.push("/login");
     } catch {
-      setError("Invalid email or password");
+      setError("Failed to create account");
     } finally {
       setLoading(false);
     }
@@ -35,7 +42,7 @@ export default function LoginPage() {
     <main className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 flex items-center justify-center px-6">
       <div className="w-full max-w-md">
         <form
-          onSubmit={handleLogin}
+          onSubmit={handleRegister}
           className="bg-white rounded-3xl shadow-2xl border border-slate-200 p-10 space-y-6"
         >
           {/* Logo */}
@@ -48,11 +55,11 @@ export default function LoginPage() {
           {/* Heading */}
           <div className="text-center">
             <h1 className="text-3xl font-bold text-slate-900">
-              Career Copilot
+              Create Account
             </h1>
 
             <p className="text-slate-500 mt-2">
-              Sign in to continue to your dashboard
+              Start your AI Career Copilot journey
             </p>
           </div>
 
@@ -69,12 +76,12 @@ export default function LoginPage() {
             </label>
 
             <input
-              className="w-full h-12 rounded-xl border border-slate-300 px-4 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               type="email"
-              placeholder="you@example.com"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
+              placeholder="you@example.com"
+              className="w-full h-12 rounded-xl border border-slate-300 px-4 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -85,39 +92,51 @@ export default function LoginPage() {
             </label>
 
             <input
-              className="w-full h-12 rounded-xl border border-slate-300 px-4 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               type="password"
-              placeholder="Enter your password"
+              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
+              placeholder="Create a password"
+              className="w-full h-12 rounded-xl border border-slate-300 px-4 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          {/* Login Button */}
+          {/* Confirm Password */}
+          <div>
+            <label className="block mb-2 text-sm font-medium text-slate-700">
+              Confirm Password
+            </label>
+
+            <input
+              type="password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirm your password"
+              className="w-full h-12 rounded-xl border border-slate-300 px-4 outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Create Account Button */}
           <button
             disabled={loading}
             className="w-full h-12 rounded-xl bg-blue-600 text-white font-semibold transition-all duration-300 hover:bg-blue-700 hover:shadow-lg disabled:opacity-50"
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading ? "Creating Account..." : "Create Account"}
           </button>
 
-          {/* Register Section */}
-          <div className="space-y-4">
-            <p className="text-center text-sm text-slate-500">
-              Don't have an account?
+          {/* Login Link */}
+          <div className="text-center">
+            <p className="text-sm text-slate-500">
+              Already have an account?
             </p>
 
             <Link
-              href="/signup"
-              className="block w-full h-12 rounded-xl border border-blue-600 text-blue-600 font-semibold text-center leading-[48px] transition-all duration-300 hover:bg-blue-50"
+              href="/login"
+              className="mt-3 inline-block font-semibold text-blue-600 hover:text-blue-700"
             >
-              Create Account
+              Login
             </Link>
-
-            <p className="text-center text-sm text-slate-500">
-              AI Career Copilot
-            </p>
           </div>
         </form>
       </div>

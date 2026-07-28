@@ -74,14 +74,15 @@ func UploadResume(c *gin.Context) {
 	_, err = DB.Exec(
 		context.Background(),
 		`
-		INSERT INTO resumes(user_id, filename, file_path, score, skills)
-        VALUES($1,$2,$3,$4,$5)
+		INSERT INTO resumes(user_id, filename, file_path, score, skills, resume_text)
+		VALUES($1,$2,$3,$4,$5,$6)
 		`,
 		userID,
 		analysis.Filename,
 		savePath,
 		analysis.Score,
 		analysis.Skills,
+		analysis.ResumeText,
 	)
 
 	if err != nil {
