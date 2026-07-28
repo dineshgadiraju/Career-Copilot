@@ -7,3 +7,12 @@ uploads/
 .vscode/
 __pycache__/
 *.pyc
+uploads/
+ml-service/uploads/
+
+*.env
+backend/.env
+frontend/.env.local
+ml-service/.env
+
+node_modules/
