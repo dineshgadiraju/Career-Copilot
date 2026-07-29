@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -24,9 +25,7 @@ func main() {
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			"http://localhost:3000",
-			"https://careercopilot-dinesh.netlify.app",
-			"https://career-copilot-smoky.vercel.app/",
-			"https://hilarious-kataifi-9685f0.netlify.app",
+			"https://career-copilot-smoky.vercel.app",
 		},
 		AllowMethods: []string{
 			"GET",
@@ -39,11 +38,13 @@ func main() {
 			"Origin",
 			"Content-Type",
 			"Authorization",
+			"Accept",
 		},
 		ExposeHeaders: []string{
 			"Content-Length",
 		},
 		AllowCredentials: false,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	router.GET("/health", func(c *gin.Context) {
