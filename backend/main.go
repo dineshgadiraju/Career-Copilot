@@ -25,7 +25,7 @@ func main() {
 		AllowOrigins: []string{
 			"http://localhost:3000",
 			"https://careercopilot-dinesh.netlify.app",
-			"https://career-copilot-three-tau.vercel.app",
+			"https://career-copilot-smoky.vercel.app/",
 			"https://hilarious-kataifi-9685f0.netlify.app",
 		},
 		AllowMethods: []string{
