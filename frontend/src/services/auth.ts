@@ -1,6 +1,8 @@
-const API_URL = "http://localhost:8081";
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 export async function login(email: string, password: string) {
+  console.log("API_URL:", API_URL);
+
   const res = await fetch(`${API_URL}/login`, {
     method: "POST",
     headers: {
@@ -10,7 +12,8 @@ export async function login(email: string, password: string) {
   });
 
   if (!res.ok) {
-    throw new Error("Login failed");
+    const error = await res.text();
+    throw new Error(error || "Login failed");
   }
 
   return res.json();

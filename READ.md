@@ -10,7 +10,7 @@ Built using **Next.js**, **Go**, **FastAPI**, **PostgreSQL**, and deployed on **
 
 **Frontend**
 
-https://career-copilot-three-tau.vercel.app/
+https://career-copilot-smoky.vercel.app/
 
 **Backend Health Check**
 
